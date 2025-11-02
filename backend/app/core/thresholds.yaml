@@ -1,0 +1,12 @@
+# Similarity thresholds
+similarity:
+  cosine:
+    threshold: 0.75
+  euclidean:
+    threshold: 5.0
+
+# Liveness detection threshold
+# Lower threshold for heuristic mode (0.3) vs ONNX model (0.5)
+anti_spoof:
+  threshold: 0.3  # Adjusted for heuristic mode - real faces typically score 0.4-0.8
+

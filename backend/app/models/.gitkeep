@@ -1,0 +1,6 @@
+# Place ONNX model files here:
+# - embedding_A.onnx
+# - embedding_B.onnx
+# - liveness.onnx
+# - emotion.onnx
+
