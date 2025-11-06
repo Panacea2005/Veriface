@@ -1,16 +1,0 @@
-veriface-dummy:
-&
-inputflatten"Flatten*
-axis 
-
-flattenoutput"Identityliveness_modelZ
-input
-
-
-
-p
-pb
-output
-
-
-B

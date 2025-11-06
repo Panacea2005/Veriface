@@ -40,9 +40,39 @@ class FaceRegistry:
         """Get all vectors for a user."""
         return self.registry.get(user_id, [])
     
-    def remove_user(self, user_id: str):
-        """Remove user from registry."""
-        if user_id in self.registry:
-            del self.registry[user_id]
+    def remove_user(self, user_id: str) -> bool:
+        """Remove user from registry. Returns True if removed."""
+        # normalize id
+        target = user_id.strip()
+        if target in self.registry:
+            del self.registry[target]
             self._save()
+            return True
+        # fallback: case-insensitive match
+        lower_map = {k.lower(): k for k in self.registry.keys()}
+        key = lower_map.get(target.lower())
+        if key is not None:
+            del self.registry[key]
+            self._save()
+            return True
+        return False
+
+    def remove_embedding(self, user_id: str, index: int) -> bool:
+        """Remove a single embedding by index for a user. Returns True if removed."""
+        if user_id not in self.registry:
+            return False
+        vectors = self.registry[user_id]
+        if index < 0 or index >= len(vectors):
+            return False
+        del vectors[index]
+        if len(vectors) == 0:
+            # Remove user if no embeddings left
+            del self.registry[user_id]
+        self._save()
+        return True
+
+    def replace_user_embeddings(self, user_id: str, embeddings: List[List[float]]):
+        """Replace all embeddings for a given user with provided list."""
+        self.registry[user_id] = embeddings
+        self._save()
 

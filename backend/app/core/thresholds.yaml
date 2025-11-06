@@ -3,10 +3,13 @@ similarity:
   cosine:
     threshold: 0.75
   euclidean:
-    threshold: 5.0
+    # For unit-normalized embeddings, euclidean relates to cosine by d = sqrt(2*(1-cos))
+    # Cosine 0.75 => d ≈ 0.707. Keep slightly conservative.
+    threshold: 0.72
 
 # Liveness detection threshold
-# Lower threshold for heuristic mode (0.3) vs ONNX model (0.5)
+# Optimized for DeepFace-based detection (more accurate than heuristic, similar to ONNX)
+# DeepFace provides better accuracy, so threshold can be more balanced
 anti_spoof:
-  threshold: 0.3  # Adjusted for heuristic mode - real faces typically score 0.4-0.8
+  threshold: 0.45  # Optimized for DeepFace - real faces typically score 0.5-0.9, spoofs score 0.1-0.4
 

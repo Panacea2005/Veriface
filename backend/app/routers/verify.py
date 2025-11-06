@@ -95,9 +95,11 @@ async def verify(
             if not isinstance(liveness, dict) or "passed" not in liveness:
                 raise ValueError("Invalid liveness response")
         except Exception as e:
-            print(f"Warning: Liveness check failed: {e}, defaulting to passed=True", file=sys.stderr)
-            liveness = {"score": 0.9, "passed": True}
+            print(f"Warning: Liveness check failed: {e}, setting to 0% (blocked)", file=sys.stderr)
+            liveness = {"score": 0.0, "passed": False}
         
+        # Prepare initial result
+        x, y, w, h = bbox
         result = {
             "liveness": liveness,
             "matched_id": None,
@@ -106,7 +108,8 @@ async def verify(
             "threshold": None,
             "emotion_label": None,
             "emotion_confidence": None,
-            "all_scores": []
+            "all_scores": [],
+            "bbox": {"x": int(x), "y": int(y), "w": int(w), "h": int(h)}
         }
         
         # Note: We still proceed with verification even if liveness check fails
@@ -134,11 +137,16 @@ async def verify(
             
             # Get all scores for display
             all_scores = similarity_matcher.get_all_scores(embedding, registry_data, metric=metric)
+            def euclidean_to_percent(d: float) -> float:
+                # With unit-normalized embeddings, distance in [0, 2]
+                d_clamped = max(0.0, min(float(d), 2.0))
+                return (1.0 - d_clamped / 2.0) * 100.0
+
             result["all_scores"] = [
                 {
                     "user_id": user_id,
                     "score": score,
-                    "percentage": score * 100 if metric == "cosine" else (1 - min(score / 10, 1)) * 100,
+                    "percentage": (score * 100.0) if metric == "cosine" else euclidean_to_percent(score),
                     "embeddings_count": count
                 }
                 for user_id, score, count in all_scores
@@ -186,6 +194,25 @@ async def verify(
                 raise ValueError("Invalid emotion response")
             result["emotion_label"] = emotion.get("label", "neutral")
             result["emotion_confidence"] = emotion.get("confidence", 0.0)
+            if isinstance(emotion.get("probs"), dict):
+                result["emotion_probs"] = emotion["probs"]
+
+            # Append to emotion logs (JSONL) for history
+            try:
+                from datetime import datetime
+                from app.core.config import STORE_DIR
+                import json as _json
+                log_entry = {
+                    "ts": datetime.utcnow().isoformat() + "Z",
+                    "label": result["emotion_label"],
+                    "confidence": result["emotion_confidence"],
+                    "bbox": result["bbox"],
+                    "liveness": result["liveness"],
+                }
+                with open(STORE_DIR / "emotion_logs.jsonl", "a", encoding="utf-8") as f:
+                    f.write(_json.dumps(log_entry) + "\n")
+            except Exception as log_e:
+                print(f"[WARN] Failed to write emotion log: {log_e}", file=sys.stderr)
         except Exception as e:
             print(f"Warning: Emotion detection failed: {e}, defaulting to neutral", file=sys.stderr)
             result["emotion_label"] = "neutral"

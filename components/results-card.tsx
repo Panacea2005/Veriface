@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { CheckCircle2, XCircle, AlertCircle, Smile, Eye, Clock, Activity, TrendingUp, Info } from "lucide-react"
+import { CheckCircle2, XCircle, AlertCircle, Eye, Clock, Activity, TrendingUp, Info } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -28,6 +28,7 @@ interface DetailedLog {
 export function ResultsCard({ verifyResult, verifyHistory = [] }: ResultsCardProps) {
   const [logs, setLogs] = useState<DetailedLog[]>([])
   const [processingSteps, setProcessingSteps] = useState<Array<{ step: string; time: number }>>([])
+  // Emotion UI moved to WebcamSection; no subscription needed here
 
   // Accumulate logs from all verification results
   useEffect(() => {
@@ -112,15 +113,7 @@ export function ResultsCard({ verifyResult, verifyHistory = [] }: ResultsCardPro
             duration: "~50ms",
             verificationIndex: idx + 1
           },
-          {
-            id: `${idx}-7`,
-            timestamp: fullTimestamp,
-            event: `[Verification #${idx + 1}] Emotion Recognition`,
-            status: "success",
-            details: `${result.emotion_label || "neutral"} (${result.emotion_confidence ? (result.emotion_confidence * 100).toFixed(1) : "0"}% confidence)`,
-            duration: "~100ms",
-            verificationIndex: idx + 1
-          }
+          // Emotion step omitted from Results timeline
         ]
         
         allLogs.push(...verificationLogs)
@@ -163,8 +156,6 @@ export function ResultsCard({ verifyResult, verifyHistory = [] }: ResultsCardPro
     : (verifyResult?.metric === "cosine" ? 75 : 5.0)
   
   const isLive = verifyResult?.liveness.passed ?? false
-  const emotion = verifyResult?.emotion_label ?? "neutral"
-  const emotionConfidence = verifyResult?.emotion_confidence ?? 0
 
   // Check if matched (has matched_id means passed threshold)
   const isMatched = verifyResult?.matched_id !== null && verifyResult?.matched_id !== undefined
@@ -177,9 +168,9 @@ export function ResultsCard({ verifyResult, verifyHistory = [] }: ResultsCardPro
   const getScoreColor = () => {
     if (!verifyResult) return "bg-muted"
     if (verifyResult.metric === "cosine") {
-      if (matchScore >= threshold) return "bg-green-600"
-      if (matchScore >= threshold - 10) return "bg-amber-600"
-      return "bg-red-600"
+    if (matchScore >= threshold) return "bg-green-600"
+    if (matchScore >= threshold - 10) return "bg-amber-600"
+    return "bg-red-600"
     } else {
       if (matchScore <= threshold) return "bg-green-600"
       if (matchScore <= threshold + 2) return "bg-amber-600"
@@ -227,6 +218,7 @@ export function ResultsCard({ verifyResult, verifyHistory = [] }: ResultsCardPro
         <CardContent className="flex flex-col gap-6">
           {verifyResult ? (
             <>
+              {/* Realtime emotion subscribed via top-level useEffect */}
               {/* Score Section */}
               <motion.div
                 className="space-y-3"
@@ -236,7 +228,7 @@ export function ResultsCard({ verifyResult, verifyHistory = [] }: ResultsCardPro
               >
                 <div className="flex items-end justify-between">
                   <div className="flex items-center gap-2">
-                    <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Match Score</span>
+                  <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Match Score</span>
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
@@ -314,7 +306,7 @@ export function ResultsCard({ verifyResult, verifyHistory = [] }: ResultsCardPro
                         <Eye className="h-3.5 w-3.5 stroke-[1.5]" />
                         {isLive ? "Live" : "Spoofed"}
                         <span className="text-xs opacity-75">
-                          ({verifyResult.liveness.score.toFixed(1)}%)
+                          ({(verifyResult.liveness.score * 100).toFixed(1)}%)
                         </span>
                       </Badge>
                     </TooltipTrigger>
@@ -324,22 +316,7 @@ export function ResultsCard({ verifyResult, verifyHistory = [] }: ResultsCardPro
                   </Tooltip>
                 </TooltipProvider>
 
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Badge variant="outline" className="gap-1.5 cursor-help rounded-lg border-border">
-                        <Smile className="h-3.5 w-3.5 stroke-[1.5]" />
-                        {emotion.charAt(0).toUpperCase() + emotion.slice(1)}
-                        <span className="text-xs opacity-75">
-                          ({(emotionConfidence * 100).toFixed(0)}%)
-                        </span>
-                      </Badge>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Detected emotion with {(emotionConfidence * 100).toFixed(1)}% confidence</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+                {/* Emotion badge removed (shown in WebcamSection) */}
 
                 {verifyResult.matched_id && (
                   <Badge variant="default" className="gap-1.5 rounded-lg">
@@ -482,41 +459,7 @@ export function ResultsCard({ verifyResult, verifyHistory = [] }: ResultsCardPro
                 </motion.div>
               )}
 
-              {/* Emotion Distribution */}
-              {verifyResult?.emotion_label && (
-                <motion.div
-                  className="space-y-2"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.35 }}
-                >
-                  <div className="flex items-center gap-2">
-                    <Smile className="h-3.5 w-3.5 text-muted-foreground" />
-                    <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                      Detected Emotion
-                    </h3>
-                  </div>
-                  <div className="rounded-xl border border-border bg-muted/30 p-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex flex-col">
-                        <span className="text-lg font-bold text-foreground capitalize">{emotion}</span>
-                        <span className="text-xs text-muted-foreground">
-                          Confidence: {(emotionConfidence * 100).toFixed(1)}%
-                        </span>
-                      </div>
-                      <div className="text-3xl">
-                        {emotion === "happy" && "😊"}
-                        {emotion === "sad" && "😢"}
-                        {emotion === "angry" && "😠"}
-                        {emotion === "surprise" && "😲"}
-                        {emotion === "fear" && "😨"}
-                        {emotion === "disgust" && "🤢"}
-                        {emotion === "neutral" && "😐"}
-                      </div>
-                    </div>
-                  </div>
-                </motion.div>
-              )}
+              {/* Emotion section removed (shown in WebcamSection) */}
 
               {/* Detailed Event Logs */}
               <motion.div
@@ -542,31 +485,31 @@ export function ResultsCard({ verifyResult, verifyHistory = [] }: ResultsCardPro
                     </TableHeader>
                     <TableBody>
                       <AnimatePresence>
-                        {logs.map((log, idx) => (
-                          <motion.tr
+                      {logs.map((log, idx) => (
+                        <motion.tr
                             key={log.id}
-                            className="border-b border-border last:border-b-0 hover:bg-muted/50 transition-colors"
-                            initial={{ opacity: 0, x: -10 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ delay: 0.4 + idx * 0.05 }}
-                          >
+                          className="border-b border-border last:border-b-0 hover:bg-muted/50 transition-colors"
+                          initial={{ opacity: 0, x: -10 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: 0.4 + idx * 0.05 }}
+                        >
                             <TableCell className="px-3 py-2 font-mono text-muted-foreground text-[10px]">
-                              {log.timestamp}
-                            </TableCell>
+                            {log.timestamp}
+                          </TableCell>
                             <TableCell className="px-3 py-2 text-xs font-medium">{log.event}</TableCell>
                             <TableCell className="px-3 py-2 text-xs text-muted-foreground">{log.details || "-"}</TableCell>
                             <TableCell className="px-3 py-2 text-xs text-muted-foreground font-mono">{log.duration || "-"}</TableCell>
-                            <TableCell className="px-3 py-2">
-                              <Badge
-                                variant="outline"
+                          <TableCell className="px-3 py-2">
+                            <Badge
+                              variant="outline"
                                 className={`rounded-md gap-1 ${getStatusColor(log.status)}`}
-                              >
+                            >
                                 {getStatusIcon(log.status)}
-                                {log.status}
-                              </Badge>
-                            </TableCell>
-                          </motion.tr>
-                        ))}
+                              {log.status}
+                            </Badge>
+                          </TableCell>
+                        </motion.tr>
+                      ))}
                       </AnimatePresence>
                     </TableBody>
                   </Table>

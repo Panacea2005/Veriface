@@ -91,6 +91,29 @@ export function EvaluationSection({ verifyResults = [] }: EvaluationSectionProps
     setShowMetrics(true)
     
     try {
+      // Validate dataset sufficiency and warn if imbalanced or missing labels
+      const positives = verifyResults.filter(r => r.matched_id !== null).length
+      const negatives = verifyResults.length - positives
+      if (positives === 0 || negatives === 0) {
+        alert(
+          `Verification history is imbalanced for ROC/AUC/EER. ` +
+          `Positives (matched): ${positives}, Negatives (unmatched): ${negatives}.\n` +
+          `ROC/AUC/EER require both classes. We'll compute confusion metrics at the current threshold; ` +
+          `ROC curve may be empty or degenerate.`
+        )
+      }
+
+      const livenessReal = verifyResults.filter(r => r.liveness.passed).length
+      const livenessSpoof = verifyResults.length - livenessReal
+      if (livenessReal === 0 || livenessSpoof === 0) {
+        console.warn("Liveness classes are imbalanced", { livenessReal, livenessSpoof })
+      }
+
+      const hasEmotion = verifyResults.some(r => r.emotion_label)
+      if (!hasEmotion) {
+        console.warn("No emotion predictions present; emotion metrics will be zeros")
+      }
+
       // Calculate Face Verification Metrics
       const calculateFaceVerificationMetrics = () => {
         // Get threshold from first result (assuming consistent threshold)
@@ -553,12 +576,12 @@ export function EvaluationSection({ verifyResults = [] }: EvaluationSectionProps
 
       {/* Session Statistics */}
       {sessionMetrics.totalVerifications > 0 && (
-        <motion.div
+    <motion.div
           className="grid gap-6 lg:grid-cols-3"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3, delay: 0.2 }}
-        >
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3, delay: 0.2 }}
+    >
           {/* Session Overview */}
           <Card className="border border-border shadow-sm">
             <CardHeader className="pb-4">
@@ -676,17 +699,17 @@ export function EvaluationSection({ verifyResults = [] }: EvaluationSectionProps
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.4 }}
         >
-          <Card className="border border-border shadow-sm">
-          <CardHeader className="pb-4">
-            <CardTitle className="text-base font-semibold">ROC Curve</CardTitle>
+      <Card className="border border-border shadow-sm">
+        <CardHeader className="pb-4">
+          <CardTitle className="text-base font-semibold">ROC Curve</CardTitle>
             <CardDescription className="text-xs">
               Receiver Operating Characteristic analysis
               {detailedMetrics && (
                 <span className="ml-2 font-medium">AUC: {detailedMetrics.faceVerification.auc.toFixed(3)}</span>
               )}
             </CardDescription>
-          </CardHeader>
-          <CardContent>
+        </CardHeader>
+        <CardContent>
             {isLoading ? (
               <div className="flex h-[500px] items-center justify-center">
                 <div className="text-center">
@@ -741,22 +764,22 @@ export function EvaluationSection({ verifyResults = [] }: EvaluationSectionProps
                     </AreaChart>
                 </ChartContainer>
             ) : (
-              <motion.div
+          <motion.div
                 className="flex h-[500px] items-center justify-center rounded-xl border border-dashed border-border bg-muted/50"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.3 }}
-              >
-                <div className="text-center">
-                  <p className="text-sm font-medium text-muted-foreground">ROC Curve Visualization</p>
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.3 }}
+          >
+            <div className="text-center">
+              <p className="text-sm font-medium text-muted-foreground">ROC Curve Visualization</p>
                   <p className="text-xs text-muted-foreground mt-1">
                     {isLoading ? "Loading metrics..." : "No metrics available yet. Run model evaluation to generate ROC curve."}
                   </p>
-                </div>
-              </motion.div>
+            </div>
+          </motion.div>
             )}
-          </CardContent>
-          </Card>
+        </CardContent>
+      </Card>
         </motion.div>
       )}
 
@@ -770,12 +793,12 @@ export function EvaluationSection({ verifyResults = [] }: EvaluationSectionProps
           {detailedMetrics ? (
             <>
               {/* Face Verification Metrics */}
-              <Card className="border border-border shadow-sm">
-                <CardHeader className="pb-4">
+      <Card className="border border-border shadow-sm">
+        <CardHeader className="pb-4">
                   <CardTitle className="text-base font-semibold">Face Verification Metrics</CardTitle>
                   <CardDescription className="text-xs">TP/FP/FN/TN, TPR, FPR, ROC, AUC, EER, TAR@FAR</CardDescription>
-                </CardHeader>
-                <CardContent>
+        </CardHeader>
+        <CardContent>
                   <div className="space-y-4">
                     {/* Confusion Matrix */}
                     <div className="grid grid-cols-4 gap-2">
@@ -798,40 +821,40 @@ export function EvaluationSection({ verifyResults = [] }: EvaluationSectionProps
                     </div>
                     
                     {/* Key Metrics */}
-                    <div className="space-y-3">
+          <div className="space-y-3">
                       {metricsDisplay.map((metric, idx) => {
                         const IconComponent = metric.icon
                         return (
-                          <motion.div
-                            key={metric.label}
-                            className="flex items-center justify-between rounded-lg border border-border bg-muted/30 px-4 py-3 hover:bg-muted/50 transition-colors"
-                            initial={{ opacity: 0, x: -10 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ delay: 0.35 + idx * 0.05 }}
-                          >
-                            <div className="flex items-center gap-2">
+              <motion.div
+                key={metric.label}
+                className="flex items-center justify-between rounded-lg border border-border bg-muted/30 px-4 py-3 hover:bg-muted/50 transition-colors"
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.35 + idx * 0.05 }}
+              >
+                <div className="flex items-center gap-2">
                               <IconComponent className={`h-4 w-4 ${metric.color}`} />
-                              <span className="text-sm font-medium text-foreground">{metric.label}</span>
-                              <TooltipProvider>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <Info className="h-3.5 w-3.5 stroke-[1.5] text-muted-foreground cursor-help" />
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    <p className="max-w-xs">{metric.tooltip}</p>
-                                  </TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
-                            </div>
-                            <motion.span
-                              className="text-lg font-semibold text-foreground"
-                              initial={{ scale: 0.8 }}
-                              animate={{ scale: 1 }}
-                              transition={{ type: "spring", stiffness: 100, delay: 0.35 + idx * 0.05 }}
-                            >
-                              {metric.value}
-                            </motion.span>
-                          </motion.div>
+                  <span className="text-sm font-medium text-foreground">{metric.label}</span>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Info className="h-3.5 w-3.5 stroke-[1.5] text-muted-foreground cursor-help" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="max-w-xs">{metric.tooltip}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
+                <motion.span
+                  className="text-lg font-semibold text-foreground"
+                  initial={{ scale: 0.8 }}
+                  animate={{ scale: 1 }}
+                  transition={{ type: "spring", stiffness: 100, delay: 0.35 + idx * 0.05 }}
+                >
+                  {metric.value}
+                </motion.span>
+              </motion.div>
                         )
                       })}
                     </div>
@@ -925,9 +948,9 @@ export function EvaluationSection({ verifyResults = [] }: EvaluationSectionProps
                       </div>
                       <span className="text-lg font-semibold">{(detailedMetrics.liveness.auc * 100).toFixed(1)}%</span>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
+          </div>
+        </CardContent>
+      </Card>
 
               {/* Emotion Metrics */}
               <Card className="border border-border shadow-sm">
@@ -992,7 +1015,7 @@ export function EvaluationSection({ verifyResults = [] }: EvaluationSectionProps
               </CardContent>
             </Card>
           )}
-        </motion.div>
+    </motion.div>
       )}
 
     </div>

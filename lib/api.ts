@@ -11,12 +11,20 @@ export interface VerifyResponse {
   threshold: number | null
   emotion_label: string
   emotion_confidence: number
+  emotion_probs?: Record<string, number>
+  bbox?: { x: number; y: number; w: number; h: number }
   all_scores?: Array<{
     user_id: string
     score: number
     percentage: number
     embeddings_count: number
   }>
+}
+
+export interface EmotionResponse {
+  label: string
+  confidence: number
+  probs: Record<string, number>
 }
 
 export interface RegisterResponse {
@@ -63,6 +71,13 @@ export interface MetricsResponse {
     macroF1: number
     accuracy: number
   }
+}
+
+export interface RegistryResponse {
+  users: string[]
+  counts: Record<string, number>
+  embeddings2d: Array<{ user_id: string; index: number; x: number; y: number }>
+  vectors?: Record<string, number[][]>
 }
 
 /**
@@ -143,6 +158,54 @@ export async function verifyFace(
     throw new Error(error.detail || "Verification failed")
   }
 
+  return response.json()
+}
+
+export async function analyzeEmotion(image: File | Blob): Promise<EmotionResponse> {
+  const formData = new FormData()
+  formData.append("image", image)
+  const response = await fetch(`${API_BASE_URL}/api/emotion`, { method: "POST", body: formData })
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ detail: "Emotion analysis failed" }))
+    throw new Error(error.detail || "Emotion analysis failed")
+  }
+  return response.json()
+}
+
+/**
+ * Fetch registry identities and (optionally) embeddings/2D projection
+ */
+export async function fetchRegistry(params?: {
+  includeVectors?: boolean
+  project?: "none" | "pca2d"
+  limitPerUser?: number
+}): Promise<RegistryResponse> {
+  const includeVectors = params?.includeVectors ? "true" : "false"
+  const project = params?.project ?? "pca2d"
+  const limit = params?.limitPerUser ?? 200
+  const url = `${API_BASE_URL}/api/registry?include_vectors=${includeVectors}&project=${project}&limit_per_user=${limit}`
+  const response = await fetch(url)
+  if (!response.ok) {
+    throw new Error("Failed to fetch registry")
+  }
+  return response.json()
+}
+
+export async function deleteRegistryUser(userId: string): Promise<{ status: string; deleted: string }> {
+  const response = await fetch(`${API_BASE_URL}/api/registry/${encodeURIComponent(userId)}`, { method: "DELETE" })
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({ detail: "Delete user failed" }))
+    throw new Error(err.detail || "Delete user failed")
+  }
+  return response.json()
+}
+
+export async function deleteRegistryEmbedding(userId: string, index: number): Promise<{ status: string; user_id: string; deleted_index: number }> {
+  const response = await fetch(`${API_BASE_URL}/api/registry/${encodeURIComponent(userId)}/${index}`, { method: "DELETE" })
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({ detail: "Delete embedding failed" }))
+    throw new Error(err.detail || "Delete embedding failed")
+  }
   return response.json()
 }
 

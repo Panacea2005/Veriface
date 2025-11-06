@@ -8,7 +8,7 @@ FastAPI backend for face recognition attendance system.
 - **Face Verification**: Verify faces against registered database
 - **Liveness Detection**: Anti-spoof detection to prevent photo/video attacks
 - **Emotion Recognition**: Detect 7 emotion classes (angry, disgust, fear, happy, neutral, sad, surprise)
-- **Multiple Modes**: Support mock, heuristic, and ONNX inference modes
+- **Modes**: Heuristic and ONNX inference (no mock)
 - **Two Embedding Models**: Switch between Model A and B for comparison
 - **Similarity Metrics**: Cosine similarity and Euclidean distance
 - **RESTful API**: Full REST API with automatic documentation
@@ -24,18 +24,12 @@ pip install -r requirements.txt
 
 ### 2. Setup Models
 
-Place your ONNX models in `app/models/`:
+Place your ONNX models in `app/models/` if you use ONNX mode:
 - `embedding_A.onnx` - Face embedding model A (512-D output)
 - `embedding_B.onnx` - Face embedding model B (512-D output)
-- `emotion.onnx` - Emotion classification (7 classes)
-- `liveness.onnx` - Liveness detection (optional, uses heuristic if missing)
+Emotion and Liveness use DeepFace (no ONNX required)
 
-**Note**: Models are already downloaded from ONNX Model Zoo. If you see IR version errors, convert them:
-```bash
-python scripts/convert_onnx_version.py
-```
-
-After training on Kaggle, export models as ONNX and replace them. If models are IR version 12, convert them first.
+After training, export embeddings as ONNX if needed for `MODE=onnx`. Emotion/Liveness are DeepFace-based and require no ONNX.
 
 ### 3. Run Backend
 
@@ -54,20 +48,19 @@ run.bat
 Script sẽ tự động:
 - Kiểm tra Python và dependencies
 - Cài đặt dependencies nếu thiếu
-- Set MODE=onnx
+- Set MODE=heur (DeepFace for detection/liveness/emotion)
 - Tạo các thư mục cần thiết
 - Start server tại http://localhost:8000
 
 **Manual (nếu cần):**
 ```bash
-set MODE=onnx
+set MODE=heur
 uvicorn app.main:app --reload --port 8000
 ```
 
 **Available modes:**
-- `mock` - Fake outputs for testing
-- `heur` - OpenCV-based heuristics  
-- `onnx` - Real ONNX model inference (default trong run.bat)
+- `heur` - DeepFace-based detection/liveness/emotion; heuristic fallbacks
+- `onnx` - Embedding via ONNXRuntime; detection/liveness/emotion still DeepFace
 
 ### 4. Test API
 
@@ -76,9 +69,8 @@ uvicorn app.main:app --reload --port 8000
 
 ## Configuration Modes
 
-- **`mock`** (default): Deterministic fake outputs for testing
-- **`heur`**: OpenCV-based heuristics (Haar cascade, variance-based liveness)
-- **`onnx`**: Real ONNX model inference (requires model files in `app/models/`)
+- **`heur`** (default): DeepFace for detection/liveness/emotion
+- **`onnx`**: Embeddings via ONNX (requires `embedding_*.onnx`), DeepFace for others
 
 ## API Endpoints
 

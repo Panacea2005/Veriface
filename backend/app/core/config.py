@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 from typing import Literal
 
-MODE: Literal["mock", "heur", "onnx"] = os.getenv("MODE", "mock")
+MODE: Literal["heur", "onnx"] = os.getenv("MODE", "heur")
 
 # Paths
 BASE_DIR = Path(__file__).parent.parent

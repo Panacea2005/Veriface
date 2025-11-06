@@ -1,11 +1,28 @@
 fastapi==0.104.1
 uvicorn[standard]==0.24.0
-numpy>=1.26.0
-opencv-python>=4.8.1.78
-onnxruntime>=1.16.3
-onnx>=1.15.0
-pillow>=10.1.0
-pydantic>=2.5.0
-python-multipart>=0.0.6
-pyyaml>=6.0.1
+
+# Pin scientific stack for TF / mediapipe compatibility on Windows/Python 3.12
+numpy==1.26.4               # <2.0 for TF 2.17 / mediapipe
+protobuf==4.25.3            # <5 for TF / mediapipe
+
+opencv-python==4.8.1.78
+pillow==10.1.0
+pydantic==2.5.0
+python-multipart==0.0.6
+pyyaml==6.0.1
+
+# DeepFace (anti-spoof) - tested with TF 2.17 stack
+deepface==0.0.95
+
+# TensorFlow stack pinned for deepface compatibility on Windows
+# TensorFlow stack for DeepFace models
+tensorflow==2.17.0
+tensorboard==2.17.1
+tf-keras==2.17.0
+keras==3.4.1
+
+# ONNX runtime (only for embeddings when MODE=onnx)
+# 1.16.3 is not available for Python 3.12; pin to a Py3.12-compatible build
+onnxruntime==1.23.2
+
 

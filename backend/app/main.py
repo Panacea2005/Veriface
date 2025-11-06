@@ -2,7 +2,9 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from app.core.config import MODE, CORS_ORIGINS
-from app.routers import health, register, verify, metrics
+from app.routers import health, register, verify, metrics, registry as registry_router
+from app.routers import emotion_logs
+from app.routers import emotion_rt
 import traceback
 import sys
 import os
@@ -23,6 +25,9 @@ app.include_router(health.router)
 app.include_router(register.router)
 app.include_router(verify.router)
 app.include_router(metrics.router)
+app.include_router(registry_router.router)
+app.include_router(emotion_logs.router)
+app.include_router(emotion_rt.router)
 
 @app.on_event("startup")
 async def startup_event():

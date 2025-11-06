@@ -137,26 +137,26 @@ export function RegisterDrawer() {
           </DrawerDescription>
         </DrawerHeader>
         <div className="overflow-y-auto">
-          <motion.div
-            className="space-y-4 px-4 pb-6"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.2 }}
-          >
-            <div className="space-y-2">
-              <Label htmlFor="name" className="text-sm font-medium">
-                Full Name
-              </Label>
-              <Input
-                id="name"
-                placeholder="Enter full name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="rounded-lg border-border"
-              />
-            </div>
+        <motion.div
+          className="space-y-4 px-4 pb-6"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.2 }}
+        >
+          <div className="space-y-2">
+            <Label htmlFor="name" className="text-sm font-medium">
+              Full Name
+            </Label>
+            <Input
+              id="name"
+              placeholder="Enter full name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="rounded-lg border-border"
+            />
+          </div>
             
-            <div className="space-y-2">
+          <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label className="text-sm font-medium">Face Images</Label>
                 <Badge variant="outline" className="text-xs">
@@ -242,12 +242,12 @@ export function RegisterDrawer() {
             </div>
             
             <div className="flex gap-3 pt-2">
-              <DrawerClose asChild>
-                <Button variant="outline" className="flex-1 rounded-lg bg-transparent">
-                  Cancel
-                </Button>
-              </DrawerClose>
-              <motion.div className="flex-1" whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+            <DrawerClose asChild>
+              <Button variant="outline" className="flex-1 rounded-lg bg-transparent">
+                Cancel
+              </Button>
+            </DrawerClose>
+            <motion.div className="flex-1" whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
                 <Button 
                   onClick={handleSubmit} 
                   disabled={!name || selectedImages.length === 0 || isSubmitting} 
@@ -257,10 +257,10 @@ export function RegisterDrawer() {
                     ? `Registering... (${selectedImages.length} images)` 
                     : `Register ${selectedImages.length || ''} Image${selectedImages.length !== 1 ? 's' : ''}`
                   }
-                </Button>
-              </motion.div>
-            </div>
-          </motion.div>
+              </Button>
+            </motion.div>
+          </div>
+        </motion.div>
         </div>
       </DrawerContent>
     </Drawer>
