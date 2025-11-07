@@ -64,6 +64,11 @@ if errorlevel 1 (
     echo [MISSING] tf-keras - Required for DeepFace backends
     set MISSING_DEPS=1
 )
+python -m pip show torch >nul 2>&1
+if errorlevel 1 (
+    echo [MISSING] torch - Required for PyTorch embedding models
+    set MISSING_DEPS=1
+)
 
 if !MISSING_DEPS!==1 (
     echo.
@@ -146,10 +151,19 @@ if not exist "app\models" (
     echo [OK] app\models directory exists
 )
 
-REM Step 5: Check and convert ONNX models if needed (for embedding/emotion, not liveness)
+REM Step 5: Check and verify PyTorch models
 echo.
-echo Checking ONNX models compatibility (embedding/emotion only)...
-echo [INFO] ONNX model conversion not required (DeepFace-only). Skipping...
+echo Checking PyTorch embedding models...
+python -c "from pathlib import Path; import sys; models_dir = Path('app/models'); pth_path = models_dir / 'ms1mv3_arcface_r100_fp16.pth'; pth_exists = pth_path.exists(); pth_size = pth_path.stat().st_size if pth_exists else 0; print(f'ms1mv3_arcface_r100_fp16.pth: {\"FOUND\" if pth_exists else \"NOT FOUND\"}' + (f' ({pth_size/1024/1024:.1f} MB)' if pth_exists else '')); sys.exit(0)" 2>nul
+if errorlevel 1 (
+    echo [INFO] Checking PyTorch models...
+) else (
+    echo [INFO] Verifying PyTorch model compatibility...
+    python -c "import torch; from pathlib import Path; import sys; models_dir = Path('app/models'); pth_path = models_dir / 'ms1mv3_arcface_r100_fp16.pth'; if pth_path.exists(): try: from app.pipelines.arcface_model import get_model; model = get_model(input_size=[112, 112], num_layers=100, mode='ir'); ckpt = torch.load(str(pth_path), map_location='cpu'); state_dict = ckpt if isinstance(ckpt, dict) and not ('state_dict' in ckpt or 'model' in ckpt) else (ckpt.get('state_dict', ckpt.get('model', ckpt))); model.load_state_dict(state_dict, strict=False); model.eval(); test_input = torch.randn(1, 3, 112, 112); with torch.no_grad(): test_output = model(test_input); if test_output.shape[-1] == 512: print(f'[OK] PyTorch model: Valid (output dim: 512)'); else: print(f'[WARN] PyTorch model: Invalid output dim {test_output.shape[-1]} (expected 512)'); except Exception as e: err_msg = str(e)[:80]; print(f'[WARN] PyTorch model: Error - {err_msg}'); print('[INFO] System will automatically use DeepFace fallback for embedding extraction'); sys.exit(0)" 2>nul
+    if errorlevel 0 (
+        echo [OK] PyTorch model verification complete
+    )
+)
 
 REM Step 6: Run server
 echo.

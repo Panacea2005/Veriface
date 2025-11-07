@@ -60,9 +60,45 @@ class FaceDetector:
         return None
     
     def align(self, image: np.ndarray, bbox: Tuple[int, int, int, int]) -> np.ndarray:
-        """Crop and align face to 112x112."""
+        """Crop and align face to 112x112 using DeepFace alignment if available."""
         x, y, w, h = bbox
-        # Simple crop and resize
+        
+        # Try to use DeepFace's alignment (5-point landmark alignment) for better accuracy
+        if self.use_deepface:
+            try:
+                from deepface import DeepFace
+                rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB) if len(image.shape) == 3 else image
+                # Use DeepFace extract_faces with align=True to get properly aligned face
+                faces = DeepFace.extract_faces(
+                    img_path=rgb,
+                    detector_backend="opencv",
+                    enforce_detection=False,
+                    align=True
+                )
+                if faces and len(faces) > 0:
+                    first = faces[0]
+                    if isinstance(first, dict):
+                        aligned_face = first.get("face", first.get("aligned", None))
+                    else:
+                        aligned_face = first
+                    if aligned_face is not None:
+                        # Ensure uint8 format
+                        if aligned_face.dtype != np.uint8:
+                            if np.max(aligned_face) <= 1.0:
+                                aligned_face = (aligned_face * 255.0).astype(np.uint8)
+                            else:
+                                aligned_face = np.clip(aligned_face, 0, 255).astype(np.uint8)
+                        # Resize to 112x112 if needed
+                        if aligned_face.shape[:2] != (112, 112):
+                            aligned_face = cv2.resize(aligned_face, (112, 112))
+                        # Convert back to BGR for consistency
+                        if len(aligned_face.shape) == 3 and aligned_face.shape[2] == 3:
+                            aligned_face = cv2.cvtColor(aligned_face, cv2.COLOR_RGB2BGR)
+                        return aligned_face
+            except Exception:
+                pass  # Fallback to simple crop and resize
+        
+        # Fallback: Simple crop and resize
         face = image[y:y+h, x:x+w]
         face_aligned = cv2.resize(face, (112, 112))
         return face_aligned

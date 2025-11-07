@@ -111,4 +111,21 @@ async def delete_embedding(user_id: str, index: int):
     return {"status": "ok", "user_id": user_id, "deleted_index": index, "remaining": len(updated.get(user_id, []))}
 
 
+@router.delete("/api/registry")
+async def clear_registry():
+    """Clear all users and embeddings from registry. Use with caution!"""
+    # Force reload before clearing
+    _ = registry.get_all()
+    deleted_count = registry.clear_all()
+    # Verify it's actually cleared
+    verify_data = registry.get_all()
+    return {
+        "status": "ok",
+        "message": "All users and embeddings cleared",
+        "deleted_users": deleted_count,
+        "verified_empty": len(verify_data) == 0,
+        "remaining_users": len(verify_data)
+    }
+
+
 

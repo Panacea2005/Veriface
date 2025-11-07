@@ -209,6 +209,15 @@ export async function deleteRegistryEmbedding(userId: string, index: number): Pr
   return response.json()
 }
 
+export async function clearRegistry(): Promise<{ status: string; message: string; deleted_users: number }> {
+  const response = await fetch(`${API_BASE_URL}/api/registry`, { method: "DELETE" })
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({ detail: "Clear registry failed" }))
+    throw new Error(err.detail || "Clear registry failed")
+  }
+  return response.json()
+}
+
 /**
  * Get ROC metrics
  */

@@ -63,9 +63,17 @@ async def register(
             if bbox is None:
                 raise HTTPException(status_code=400, detail="No face detected in image")
             
+            print(f"[DEBUG] Register: Detected face bbox: {bbox}", file=sys.stderr)
             face_aligned = detector.align(img, bbox)
             if face_aligned is None or face_aligned.size == 0:
                 raise HTTPException(status_code=400, detail="Failed to align face")
+            
+            # Debug: Check face image stats to ensure different faces produce different images
+            face_mean = np.mean(face_aligned)
+            face_std = np.std(face_aligned)
+            face_min = np.min(face_aligned)
+            face_max = np.max(face_aligned)
+            print(f"[DEBUG] Register: Aligned face stats: shape={face_aligned.shape}, mean={face_mean:.2f}, std={face_std:.2f}, min={face_min:.0f}, max={face_max:.0f}", file=sys.stderr)
         except HTTPException:
             raise
         except Exception as e:
@@ -79,7 +87,26 @@ async def register(
         # Extract embedding
         try:
             embed_model = EmbedModel(model_type=model)
+            model_type_used = "PyTorch" if embed_model.model is not None else "DeepFace"
+            print(f"[DEBUG] Register: Using {model_type_used} model for embedding extraction", file=sys.stderr)
             embedding = embed_model.extract(face_aligned)
+            embedding_norm = np.linalg.norm(embedding) if embedding is not None else 0.0
+            embedding_mean = np.mean(embedding) if embedding is not None else 0.0
+            embedding_std = np.std(embedding) if embedding is not None else 0.0
+            embedding_min = np.min(embedding) if embedding is not None else 0.0
+            embedding_max = np.max(embedding) if embedding is not None else 0.0
+            # Sample first 5 values for debugging
+            embedding_sample = embedding[:5].tolist() if embedding is not None and len(embedding) >= 5 else []
+            print(f"[DEBUG] Register: Embedding shape: {embedding.shape if embedding is not None else None}, norm: {embedding_norm:.6f}, mean: {embedding_mean:.6f}, std: {embedding_std:.6f}, min: {embedding_min:.6f}, max: {embedding_max:.6f}", file=sys.stderr)
+            print(f"[DEBUG] Register: Embedding sample (first 5): {embedding_sample}", file=sys.stderr)
+            
+            # Check if embedding is all zeros or constant (indicates model failure)
+            if embedding is not None:
+                if embedding_norm < 1e-6:
+                    raise ValueError("Embedding is all zeros - model may not be working correctly")
+                if embedding_std < 1e-6:
+                    raise ValueError("Embedding has zero variance - model may not be working correctly")
+            
             if embedding is None or embedding.size == 0:
                 raise ValueError("Failed to extract embedding")
         except Exception as e:
@@ -87,7 +114,24 @@ async def register(
         
         # Save to registry
         try:
+            # Check if this embedding already exists for this user (avoid duplicates)
+            existing_vectors = registry.get_user_vectors(user_id)
+            if existing_vectors:
+                # Compare with existing embeddings
+                for idx, existing_vec in enumerate(existing_vectors):
+                    existing_array = np.array(existing_vec, dtype=np.float32)
+                    # Normalize for comparison
+                    existing_norm = np.linalg.norm(existing_array)
+                    if existing_norm > 0.1:
+                        existing_array = existing_array / existing_norm
+                    similarity = np.dot(embedding, existing_array)
+                    distance = np.linalg.norm(embedding - existing_array)
+                    print(f"[DEBUG] Register: Comparing with existing embedding {idx+1}: similarity={similarity:.6f}, distance={distance:.6f}", file=sys.stderr)
+                    if distance < 1e-6 or similarity > 0.9999:
+                        print(f"[WARNING] Register: New embedding is nearly identical to existing embedding {idx+1} (distance: {distance:.6f}, similarity: {similarity:.6f})", file=sys.stderr)
+            
             registry.add_user(user_id, embedding)
+            print(f"[DEBUG] Register: Successfully saved embedding for user '{user_id}'", file=sys.stderr)
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Failed to save to registry: {str(e)}")
         

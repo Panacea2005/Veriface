@@ -121,8 +121,23 @@ async def verify(
         try:
             print(f"[DEBUG] Extracting embedding with model {model}...", file=sys.stderr)
             embed_model = EmbedModel(model_type=model)
+            model_type_used = "PyTorch" if embed_model.model is not None else "DeepFace"
+            print(f"[DEBUG] Using {model_type_used} model for embedding extraction", file=sys.stderr)
             embedding = embed_model.extract(face_aligned)
-            print(f"[DEBUG] Embedding shape: {embedding.shape if embedding is not None else None}", file=sys.stderr)
+            embedding_norm = np.linalg.norm(embedding) if embedding is not None else 0.0
+            embedding_mean = np.mean(embedding) if embedding is not None else 0.0
+            embedding_std = np.std(embedding) if embedding is not None else 0.0
+            embedding_sample = embedding[:5].tolist() if embedding is not None and len(embedding) >= 5 else []
+            print(f"[DEBUG] Embedding shape: {embedding.shape if embedding is not None else None}, norm: {embedding_norm:.6f}, mean: {embedding_mean:.6f}, std: {embedding_std:.6f}", file=sys.stderr)
+            print(f"[DEBUG] Embedding sample (first 5): {embedding_sample}", file=sys.stderr)
+            
+            # Check if embedding is all zeros or constant (indicates model failure)
+            if embedding is not None:
+                if embedding_norm < 1e-6:
+                    raise ValueError("Embedding is all zeros - model may not be working correctly")
+                if embedding_std < 1e-6:
+                    raise ValueError("Embedding has zero variance - model may not be working correctly")
+            
             if embedding is None or embedding.size == 0:
                 raise ValueError("Failed to extract embedding")
         except Exception as e:

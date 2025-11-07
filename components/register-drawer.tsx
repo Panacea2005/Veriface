@@ -122,8 +122,8 @@ export function RegisterDrawer() {
   return (
     <Drawer>
       <DrawerTrigger asChild>
-        <motion.div className="w-full" whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-          <Button variant="outline" className="w-full gap-2 rounded-lg h-10 bg-transparent">
+        <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+          <Button size="sm" variant="outline" className="gap-2">
             <UserPlus className="h-4 w-4 stroke-[1.5]" />
             Register
           </Button>

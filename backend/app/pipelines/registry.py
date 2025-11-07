@@ -25,6 +25,8 @@ class FaceRegistry:
     
     def add_user(self, user_id: str, embedding: np.ndarray):
         """Add or update user embedding."""
+        # Always reload from file first to ensure we have latest state
+        self.registry = self._load()
         vec = embedding.tolist()
         if user_id not in self.registry:
             self.registry[user_id] = []
@@ -38,10 +40,14 @@ class FaceRegistry:
     
     def get_user_vectors(self, user_id: str) -> List[List[float]]:
         """Get all vectors for a user."""
+        # Always reload from file first to ensure we have latest state
+        self.registry = self._load()
         return self.registry.get(user_id, [])
     
     def remove_user(self, user_id: str) -> bool:
         """Remove user from registry. Returns True if removed."""
+        # Always reload from file first to ensure we have latest state
+        self.registry = self._load()
         # normalize id
         target = user_id.strip()
         if target in self.registry:
@@ -59,6 +65,8 @@ class FaceRegistry:
 
     def remove_embedding(self, user_id: str, index: int) -> bool:
         """Remove a single embedding by index for a user. Returns True if removed."""
+        # Always reload from file first to ensure we have latest state
+        self.registry = self._load()
         if user_id not in self.registry:
             return False
         vectors = self.registry[user_id]
@@ -73,6 +81,26 @@ class FaceRegistry:
 
     def replace_user_embeddings(self, user_id: str, embeddings: List[List[float]]):
         """Replace all embeddings for a given user with provided list."""
+        # Always reload from file first to ensure we have latest state
+        self.registry = self._load()
         self.registry[user_id] = embeddings
         self._save()
+    
+    def clear_all(self) -> int:
+        """Clear all users and embeddings from registry. Returns number of users deleted."""
+        # Reload first to get accurate count
+        self.registry = self._load()
+        count = len(self.registry)
+        self.registry = {}
+        self._save()
+        
+        # Also delete backup file if it exists
+        backup_path = self.path.parent / f"{self.path.name}.backup"
+        if backup_path.exists():
+            try:
+                backup_path.unlink()
+            except Exception:
+                pass  # Ignore errors deleting backup
+        
+        return count
 

@@ -380,8 +380,9 @@ export function WebcamSection({ onVerifyResult }: WebcamSectionProps) {
                     <span>
                       {registryInfo.users_count || 0} user{registryInfo.users_count !== 1 ? 's' : ''} • {registryInfo.total_embeddings || 0} embeddings
                     </span>
-                    <div>
+                    <div className="flex items-center gap-2">
                       <Button size="sm" variant="outline" onClick={() => setRegistryOpen(true)}>Explore</Button>
+                      <RegisterDrawer />
                     </div>
                   </div>
                 )}
@@ -392,9 +393,9 @@ export function WebcamSection({ onVerifyResult }: WebcamSectionProps) {
         <CardContent className="flex flex-col gap-6">
           <RegistryDialog open={registryOpen} onOpenChange={setRegistryOpen} />
           {/* Main Layout: Left webcam, Right controls + emotion */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-stretch">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-stretch min-h-[600px]">
             {/* Left: Capture area (spans 2) */}
-            <div className="lg:col-span-2 space-y-4 flex flex-col h-full">
+            <div className="lg:col-span-2 space-y-4 flex flex-col h-full min-h-[600px]">
                 <Tabs value={mode} onValueChange={(v) => setMode(v as Mode)} className="h-full flex flex-col">
                 <TabsList className="grid w-full grid-cols-2">
                   <TabsTrigger value="upload" className="gap-2">
@@ -407,8 +408,8 @@ export function WebcamSection({ onVerifyResult }: WebcamSectionProps) {
                   </TabsTrigger>
                 </TabsList>
 
-                <TabsContent value="upload" className="mt-4">
-                  <div className="relative flex items-center justify-center overflow-hidden rounded-xl bg-muted border border-border h-96">
+                <TabsContent value="upload" className="mt-4 flex-1">
+                  <div className="relative flex items-center justify-center overflow-hidden rounded-xl bg-muted border border-border h-full">
                     <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageSelect} className="hidden" />
                     {previewUrl ? (
                       <div 
@@ -600,9 +601,7 @@ export function WebcamSection({ onVerifyResult }: WebcamSectionProps) {
                       Auto-capture
                     </Button>
                   </div>
-                ) : (
-                  <RegisterDrawer />
-                )}
+                ) : null}
               </div>
             </div>
           </div>

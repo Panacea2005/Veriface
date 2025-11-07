@@ -11,10 +11,14 @@ class SimilarityMatcher:
             self.config = yaml.safe_load(f)
         self.cosine_threshold = self.config.get("similarity", {}).get("cosine", {}).get("threshold", 0.75)
         self.euclidean_threshold = self.config.get("similarity", {}).get("euclidean", {}).get("threshold", 5.0)
+        self._warned_about_old_embeddings = False
     
     def cosine_similarity(self, vec1: np.ndarray, vec2: np.ndarray) -> float:
         """Compute cosine similarity."""
-        return float(np.dot(vec1, vec2) / (np.linalg.norm(vec1) * np.linalg.norm(vec2) + 1e-8))
+        # Ensure vectors are normalized
+        vec1_norm = vec1 / (np.linalg.norm(vec1) + 1e-8)
+        vec2_norm = vec2 / (np.linalg.norm(vec2) + 1e-8)
+        return float(np.dot(vec1_norm, vec2_norm))
     
     def euclidean_distance(self, vec1: np.ndarray, vec2: np.ndarray) -> float:
         """Compute euclidean distance."""
@@ -34,7 +38,13 @@ class SimilarityMatcher:
                 query_vec_normalized = query_vec.astype(np.float32)
                 
                 if len(query_vec_normalized) != len(vec_array):
+                    print(f"[DEBUG] Warning: Dimension mismatch for user {user_id} - query: {len(query_vec_normalized)}, registry: {len(vec_array)}", file=__import__('sys').stderr)
                     continue
+                
+                # Normalize registry embeddings if needed (for compatibility with old embeddings)
+                vec_norm = np.linalg.norm(vec_array)
+                if vec_norm > 0.1 and vec_norm < 0.9:  # Likely not normalized
+                    vec_array = vec_array / vec_norm
                 
                 if metric == "cosine":
                     score = self.cosine_similarity(query_vec_normalized, vec_array)
@@ -84,9 +94,22 @@ class SimilarityMatcher:
                     print(f"[DEBUG] Warning: Dimension mismatch - query: {len(query_vec_normalized)}, registry: {len(vec_array)}", file=sys.stderr)
                     continue
                 
+                # Normalize registry embeddings if needed (for compatibility with old embeddings)
+                vec_norm = np.linalg.norm(vec_array)
+                if vec_norm > 0.1 and vec_norm < 0.9:  # Likely not normalized or from different model
+                    vec_array = vec_array / vec_norm
+                    if not self._warned_about_old_embeddings:
+                        print(f"[WARNING] Registry embeddings appear to be from a different model (norm: {vec_norm:.4f}). Normalizing for compatibility, but match scores may be low. Consider re-registering with current model.", file=sys.stderr)
+                        self._warned_about_old_embeddings = True
+                    print(f"[DEBUG]   Normalized registry embedding {idx+1} (original norm: {vec_norm:.4f})", file=sys.stderr)
+                
                 if metric == "cosine":
                     score = self.cosine_similarity(query_vec_normalized, vec_array)
-                    print(f"[DEBUG]   Embedding {idx+1} cosine score: {score:.4f}", file=sys.stderr)
+                    # Debug: Check if embeddings are identical
+                    vec_diff = np.linalg.norm(query_vec_normalized - vec_array)
+                    print(f"[DEBUG]   Embedding {idx+1} cosine score: {score:.4f}, L2 distance: {vec_diff:.6f}", file=sys.stderr)
+                    if vec_diff < 1e-6:
+                        print(f"[WARNING]   Embeddings are nearly identical (distance: {vec_diff:.6f}) - possible duplicate registration!", file=sys.stderr)
                     if score > best_score:
                         best_score = score
                         best_user = user_id
