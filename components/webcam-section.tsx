@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect, useCallback } from "react"
-import { Camera, RefreshCw, Upload, CheckCircle2, AlertCircle } from "lucide-react"
+import { Camera, RefreshCw, Upload, CheckCircle2, AlertCircle, RotateCcw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { RegisterDrawer } from "@/components/register-drawer"
@@ -371,12 +371,12 @@ export function WebcamSection({ onVerifyResult }: WebcamSectionProps) {
             <div className="flex flex-col items-end gap-1 text-xs">
                 <div className="flex items-center gap-2">
                   <div className={`h-2 w-2 rounded-full ${registryInfo.accessible ? "bg-green-500 animate-pulse" : "bg-red-500"}`} />
-                  <span className="text-muted-foreground font-medium">
+                  <span className="text-foreground/80 font-medium">
                     {registryInfo.accessible ? "Registry Active" : "Registry Inaccessible"}
                   </span>
                 </div>
                 {registryInfo.accessible && (
-                  <div className="flex flex-col items-end gap-2 text-muted-foreground/70">
+                  <div className="flex flex-col items-end gap-2 text-foreground/70">
                     <span>
                       {registryInfo.users_count || 0} user{registryInfo.users_count !== 1 ? 's' : ''} • {registryInfo.total_embeddings || 0} embeddings
                     </span>
@@ -440,7 +440,7 @@ export function WebcamSection({ onVerifyResult }: WebcamSectionProps) {
                       </div>
                     )}
                     {isCapturing && (
-                      <motion.div className="absolute inset-0 bg-primary/5 flex items-center justify-center z-10" initial={{ opacity: 0 }} animate={{ opacity: [0, 0.5, 0] }} transition={{ duration: 0.6 }}>
+                      <motion.div className="absolute inset-0 bg-accent/10 flex items-center justify-center z-10" initial={{ opacity: 0 }} animate={{ opacity: [0, 0.5, 0] }} transition={{ duration: 0.6 }}>
                         <span className="text-sm font-medium">Processing...</span>
                       </motion.div>
                     )}
@@ -493,7 +493,7 @@ export function WebcamSection({ onVerifyResult }: WebcamSectionProps) {
                       </div>
                     )}
                     {isCapturing && (
-                      <motion.div className="absolute inset-0 bg-primary/5 flex items-center justify-center z-10" initial={{ opacity: 0 }} animate={{ opacity: [0, 0.5, 0] }} transition={{ duration: 0.6 }}>
+                      <motion.div className="absolute inset-0 bg-secondary/15 flex items-center justify-center z-10" initial={{ opacity: 0 }} animate={{ opacity: [0, 0.5, 0] }} transition={{ duration: 0.6 }}>
                         <span className="text-sm font-medium">Processing...</span>
                       </motion.div>
                     )}
@@ -516,11 +516,11 @@ export function WebcamSection({ onVerifyResult }: WebcamSectionProps) {
                       <span className="inline-flex items-center gap-1 text-red-600 text-xs"><AlertCircle className="h-3.5 w-3.5" /> Spoof</span>
                     )
                   ) : (
-                    <span className="text-xs text-muted-foreground">Waiting...</span>
+                    <span className="text-xs text-foreground/60">Waiting...</span>
                   )}
                 </div>
                 {lastVerify && (
-                  <div className="text-xs text-muted-foreground">
+                  <div className="text-xs text-foreground/80">
                     {lastVerify.matched_id ? (
                       <div className="flex items-center justify-between">
                         <span>Matched</span>
@@ -551,9 +551,9 @@ export function WebcamSection({ onVerifyResult }: WebcamSectionProps) {
                       .sort((a, b) => b[1] - a[1])
                       .map(([k, v]) => (
                         <div key={k} className="flex items-center gap-2">
-                          <div className={`text-xs w-20 ${liveEmotion.label === k ? "font-semibold" : "text-muted-foreground"}`}>{k}</div>
+                          <div className={`text-xs w-20 ${liveEmotion.label === k ? "font-semibold text-foreground" : "text-foreground/70"}`}>{k}</div>
                           <div className="flex-1 h-2 bg-muted rounded">
-                            <div className="h-2 bg-primary rounded" style={{ width: `${Math.min(100, Math.max(0, v * 100)).toFixed(0)}%` }} />
+                            <div className="h-2 bg-accent rounded" style={{ width: `${Math.min(100, Math.max(0, v * 100)).toFixed(0)}%` }} />
                           </div>
                           <div className="w-12 text-right text-xs tabular-nums">{(v * 100).toFixed(0)}%</div>
                         </div>
@@ -564,17 +564,17 @@ export function WebcamSection({ onVerifyResult }: WebcamSectionProps) {
                       const em = k === "happy" ? "😊" : k === "sad" ? "😢" : k === "angry" ? "😠" : k === "surprise" ? "😲" : k === "fear" ? "😨" : k === "disgust" ? "🤢" : "😐"
                       return (
                         <div className="mt-4 pt-4 border-t border-border">
-                          <div className="rounded-lg bg-primary/10 border border-primary/20 p-3 flex items-center justify-between">
+                          <div className="rounded-lg bg-background border border-border p-3 flex items-center justify-between">
                             <div className="flex items-center gap-3">
                               <span className="text-3xl leading-none">{em}</span>
                               <div className="flex flex-col">
-                                <span className="text-xs text-muted-foreground uppercase tracking-wide">Detected</span>
-                                <span className="text-base font-bold capitalize">{k}</span>
+                                <span className="text-xs text-foreground/70 uppercase tracking-wide">Detected</span>
+                                <span className="text-base font-bold capitalize text-foreground">{k}</span>
                               </div>
                             </div>
                             <div className="text-right">
-                              <div className="text-2xl font-bold text-primary">{(v * 100).toFixed(0)}%</div>
-                              <div className="text-[10px] text-muted-foreground uppercase">Confidence</div>
+                              <div className="text-2xl font-bold text-accent">{(v * 100).toFixed(0)}%</div>
+                              <div className="text-[10px] text-foreground/70 uppercase">Confidence</div>
                             </div>
                           </div>
                         </div>
@@ -582,21 +582,37 @@ export function WebcamSection({ onVerifyResult }: WebcamSectionProps) {
                     })()}
                   </div>
                 ) : (
-                  <div className="text-xs text-muted-foreground">No emotion yet. Capture to view.</div>
+                  <div className="text-xs text-foreground/70">No emotion yet. Capture to view.</div>
                 )}
               </div>
 
               {/* Controls */}
               <div className="rounded-lg border border-border p-3 space-y-3 mt-auto">
                 <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                  <Button onClick={handleVerify} className="w-full gap-2 h-10 rounded-lg" disabled={isCapturing || (mode === "upload" && !selectedImage)}>
+                  <Button variant="secondary" onClick={handleVerify} className="w-full gap-2 h-10 rounded-lg shadow-sm" disabled={isCapturing || (mode === "upload" && !selectedImage)}>
                     <Camera className="h-4 w-4 stroke-[1.5]" />
                     {isCapturing ? "Verifying..." : mode === "webcam" && !selectedImage ? "Capture & Verify" : "Verify Face"}
                   </Button>
                 </motion.div>
+                {(selectedImage || previewUrl) && (
+                  <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                    <Button
+                      variant="outline"
+                      onClick={handleReset}
+                      className="w-full gap-2 h-10 rounded-lg"
+                    >
+                      <RotateCcw className="h-4 w-4 stroke-[1.5]" />
+                      Reset
+                    </Button>
+                  </motion.div>
+                )}
                 {mode === "webcam" ? (
                   <div className="grid grid-cols-1 gap-2">
-                    <Button variant={isAutoCapture ? "default" : "outline"} className="w-full gap-2 h-10 rounded-lg" onClick={() => setIsAutoCapture(!isAutoCapture)}>
+                    <Button
+                      variant="outline"
+                      className={`w-full gap-2 h-10 rounded-lg transition-colors ${isAutoCapture ? "bg-accent text-accent-foreground hover:bg-accent/90 border-transparent" : ""}`}
+                      onClick={() => setIsAutoCapture(!isAutoCapture)}
+                    >
                       <RefreshCw className={`h-4 w-4 stroke-[1.5] ${isAutoCapture ? "animate-spin" : ""}`} />
                       Auto-capture
                     </Button>

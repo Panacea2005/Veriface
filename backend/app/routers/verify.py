@@ -98,6 +98,14 @@ async def verify(
             print(f"Warning: Liveness check failed: {e}, setting to 0% (blocked)", file=sys.stderr)
             liveness = {"score": 0.0, "passed": False}
         
+        # Block verification if liveness check fails
+        if not liveness.get("passed", False):
+            x, y, w, h = bbox
+            raise HTTPException(
+                status_code=400,
+                detail=f"Liveness check failed (score: {liveness.get('score', 0.0):.2f}). Verification blocked for security."
+            )
+        
         # Prepare initial result
         x, y, w, h = bbox
         result = {
@@ -112,10 +120,38 @@ async def verify(
             "bbox": {"x": int(x), "y": int(y), "w": int(w), "h": int(h)}
         }
         
-        # Note: We still proceed with verification even if liveness check fails
-        # The liveness result is included in the response for the frontend to display
-        # but we don't block verification in development/testing scenarios
-        # In production, you may want to enforce liveness passing
+        # Emotion detection (do this early so it's available for attendance logging)
+        try:
+            print(f"[DEBUG] Detecting emotion...", file=sys.stderr)
+            emotion = emotion_model.predict(face_aligned)
+            print(f"[DEBUG] Emotion result: {emotion}", file=sys.stderr)
+            if not isinstance(emotion, dict) or "label" not in emotion:
+                raise ValueError("Invalid emotion response")
+            result["emotion_label"] = emotion.get("label", "neutral")
+            result["emotion_confidence"] = emotion.get("confidence", 0.0)
+            if isinstance(emotion.get("probs"), dict):
+                result["emotion_probs"] = emotion["probs"]
+
+            # Append to emotion logs (JSONL) for history
+            try:
+                from datetime import datetime
+                from app.core.config import STORE_DIR
+                import json as _json
+                log_entry = {
+                    "ts": datetime.utcnow().isoformat() + "Z",
+                    "label": result["emotion_label"],
+                    "confidence": result["emotion_confidence"],
+                    "bbox": result["bbox"],
+                    "liveness": result["liveness"],
+                }
+                with open(STORE_DIR / "emotion_logs.jsonl", "a", encoding="utf-8") as f:
+                    f.write(_json.dumps(log_entry) + "\n")
+            except Exception as log_e:
+                print(f"[WARN] Failed to write emotion log: {log_e}", file=sys.stderr)
+        except Exception as e:
+            print(f"Warning: Emotion detection failed: {e}, defaulting to neutral", file=sys.stderr)
+            result["emotion_label"] = "neutral"
+            result["emotion_confidence"] = 0.0
         
         # Extract embedding
         try:
@@ -187,6 +223,25 @@ async def verify(
                     matched_id, score = match
                     result["matched_id"] = matched_id
                     print(f"[DEBUG] Match PASSED: {matched_id} with score {score:.4f}", file=sys.stderr)
+                    
+                    # Log attendance for successful match
+                    try:
+                        from app.routers.attendance import _log_attendance, _determine_check_type
+                        from datetime import datetime
+                        check_type = _determine_check_type(matched_id)
+                        _log_attendance({
+                            "timestamp": datetime.utcnow().isoformat() + "Z",
+                            "user_id": matched_id,
+                            "type": check_type,
+                            "match_score": float(score),
+                            "liveness_score": float(liveness.get("score", 0.0)),
+                            "emotion_label": result.get("emotion_label"),
+                            "emotion_confidence": result.get("emotion_confidence")
+                        })
+                        result["check_type"] = check_type
+                        print(f"[DEBUG] Attendance logged for user: {matched_id}, type: {check_type}", file=sys.stderr)
+                    except Exception as log_e:
+                        print(f"[WARN] Failed to log attendance: {log_e}", file=sys.stderr)
                 else:
                     result["matched_id"] = None
                     print(f"[DEBUG] No match (best score {best_score:.4f} below threshold)", file=sys.stderr)
@@ -199,39 +254,6 @@ async def verify(
             result["all_scores"] = []
             result["score"] = None
             result["matched_id"] = None
-        
-        # Emotion detection
-        try:
-            print(f"[DEBUG] Detecting emotion...", file=sys.stderr)
-            emotion = emotion_model.predict(face_aligned)
-            print(f"[DEBUG] Emotion result: {emotion}", file=sys.stderr)
-            if not isinstance(emotion, dict) or "label" not in emotion:
-                raise ValueError("Invalid emotion response")
-            result["emotion_label"] = emotion.get("label", "neutral")
-            result["emotion_confidence"] = emotion.get("confidence", 0.0)
-            if isinstance(emotion.get("probs"), dict):
-                result["emotion_probs"] = emotion["probs"]
-
-            # Append to emotion logs (JSONL) for history
-            try:
-                from datetime import datetime
-                from app.core.config import STORE_DIR
-                import json as _json
-                log_entry = {
-                    "ts": datetime.utcnow().isoformat() + "Z",
-                    "label": result["emotion_label"],
-                    "confidence": result["emotion_confidence"],
-                    "bbox": result["bbox"],
-                    "liveness": result["liveness"],
-                }
-                with open(STORE_DIR / "emotion_logs.jsonl", "a", encoding="utf-8") as f:
-                    f.write(_json.dumps(log_entry) + "\n")
-            except Exception as log_e:
-                print(f"[WARN] Failed to write emotion log: {log_e}", file=sys.stderr)
-        except Exception as e:
-            print(f"Warning: Emotion detection failed: {e}, defaulting to neutral", file=sys.stderr)
-            result["emotion_label"] = "neutral"
-            result["emotion_confidence"] = 0.0
         
         print(f"[DEBUG] Returning result: {result}", file=sys.stderr)
         return result

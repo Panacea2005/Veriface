@@ -8,7 +8,7 @@ FastAPI backend for face recognition attendance system.
 - **Face Verification**: Verify faces against registered database
 - **Liveness Detection**: Anti-spoof detection to prevent photo/video attacks
 - **Emotion Recognition**: Detect 7 emotion classes (angry, disgust, fear, happy, neutral, sad, surprise)
-- **Modes**: Heuristic and ONNX inference (no mock)
+- **Embedding Models**: PyTorch ArcFace (.pth) with DeepFace fallback
 - **Two Embedding Models**: Switch between Model A and B for comparison
 - **Similarity Metrics**: Cosine similarity and Euclidean distance
 - **RESTful API**: Full REST API with automatic documentation
@@ -24,12 +24,11 @@ pip install -r requirements.txt
 
 ### 2. Setup Models
 
-Place your ONNX models in `app/models/` if you use ONNX mode:
-- `embedding_A.onnx` - Face embedding model A (512-D output)
-- `embedding_B.onnx` - Face embedding model B (512-D output)
-Emotion and Liveness use DeepFace (no ONNX required)
+Place your trained PyTorch model in `app/models/`:
+- `ms1mv3_arcface_r100_fp16.pth` - Face embedding model (512-D output)
 
-After training, export embeddings as ONNX if needed for `MODE=onnx`. Emotion/Liveness are DeepFace-based and require no ONNX.
+The system will automatically use the PyTorch model if available, otherwise falls back to DeepFace ArcFace.
+Emotion and Liveness use DeepFace (no additional models required).
 
 ### 3. Run Backend
 
@@ -48,34 +47,32 @@ run.bat
 Script sẽ tự động:
 - Kiểm tra Python và dependencies
 - Cài đặt dependencies nếu thiếu
-- Set MODE=heur (DeepFace for detection/liveness/emotion)
 - Tạo các thư mục cần thiết
 - Start server tại http://localhost:8000
 
 **Manual (nếu cần):**
 ```bash
-set MODE=heur
 uvicorn app.main:app --reload --port 8000
 ```
-
-**Available modes:**
-- `heur` - DeepFace-based detection/liveness/emotion; heuristic fallbacks
-- `onnx` - Embedding via ONNXRuntime; detection/liveness/emotion still DeepFace
 
 ### 4. Test API
 
 - **API Docs**: http://localhost:8000/docs
 - **Health Check**: http://localhost:8000/health
 
-## Configuration Modes
+## Model Architecture
 
-- **`heur`** (default): DeepFace for detection/liveness/emotion
-- **`onnx`**: Embeddings via ONNX (requires `embedding_*.onnx`), DeepFace for others
+- **Face Embedding**: PyTorch ArcFace ResNet-100 (512-D vectors)
+  - Automatically loads from `app/models/ms1mv3_arcface_r100_fp16.pth`
+  - Falls back to DeepFace ArcFace if PyTorch model unavailable
+- **Face Detection**: DeepFace with OpenCV backend
+- **Liveness Detection**: DeepFace anti-spoofing
+- **Emotion Recognition**: DeepFace emotion classifier
 
 ## API Endpoints
 
 ### `GET /health`
-Health check - returns `{status: "ok", mode: MODE}`
+Health check - returns `{status: "ok"}`
 
 ### `POST /api/register`
 Register a new user face.
@@ -121,9 +118,6 @@ Verify a face against registered database.
 }
 ```
 
-### `GET /api/roc`
-Get ROC curve metrics (AUC, EER, accuracy, precision, recall).
-
 ## Folder Structure
 
 ```
@@ -131,15 +125,13 @@ backend/
 ├── app/
 │   ├── main.py           # FastAPI app entry point
 │   ├── core/             # Configuration files
-│   │   ├── config.py     # Settings (MODE, paths, CORS)
+│   │   ├── config.py     # Settings (paths, CORS)
 │   │   ├── thresholds.yaml
-│   │   ├── preprocess.json
 │   │   └── label_map.json
 │   ├── routers/          # API endpoints
 │   │   ├── health.py
 │   │   ├── register.py
-│   │   ├── verify.py
-│   │   └── metrics.py
+│   │   └── verify.py
 │   ├── pipelines/        # Model pipelines
 │   │   ├── detector.py   # Face detection & alignment
 │   │   ├── liveness.py   # Liveness detection
@@ -147,15 +139,15 @@ backend/
 │   │   ├── emotion.py    # Emotion classification
 │   │   ├── similarity.py # Similarity matching
 │   │   └── registry.py   # User registry (JSON store)
-│   ├── models/           # ONNX model files (place here)
+│   ├── models/           # PyTorch model files (place here)
 │   └── store/            # Registry JSON storage
 └── requirements.txt
 ```
 
 ## After Training on Kaggle
 
-1. Export your trained models as ONNX format
-2. Place them in `app/models/` with correct names
-3. Restart backend - models will be automatically loaded
+1. Export your trained PyTorch model as `.pth` format
+2. Place it in `app/models/` as `ms1mv3_arcface_r100_fp16.pth`
+3. Restart backend - model will be automatically loaded
 
-See `app/models/README.md` for detailed model requirements.
+The model should be an ArcFace ResNet-100 architecture with 512-D output embeddings.

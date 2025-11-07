@@ -2,11 +2,14 @@
 
 import React from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
 import { fetchRegistry, RegistryResponse, deleteRegistryEmbedding, deleteRegistryUser } from "@/lib/api"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { useToast } from "@/hooks/use-toast"
+import { cn } from "@/lib/utils"
 
 // Prefer green tones: use chart-2 exclusively to avoid yellow hues
 const palette = ["var(--chart-2)"]
@@ -33,21 +36,67 @@ export default function RegistryDialog({ open, onOpenChange }: RegistryDialogPro
   const [query, setQuery] = React.useState("")
   const [selectedUser, setSelectedUser] = React.useState<string | null>(null)
   const [busy, setBusy] = React.useState(false)
+  const { toast } = useToast()
+
+  const [confirmState, setConfirmState] = React.useState<{
+    open: boolean
+    title: string
+    description?: string
+    confirmLabel?: string
+    variant?: "default" | "destructive"
+    action?: () => Promise<void>
+  }>({ open: false, title: "" })
+  const [confirmBusy, setConfirmBusy] = React.useState(false)
+
+  const openConfirm = React.useCallback((config: {
+    title: string
+    description?: string
+    confirmLabel?: string
+    variant?: "default" | "destructive"
+    action: () => Promise<void>
+  }) => {
+    setConfirmState({ open: true, ...config })
+  }, [])
+
+  const handleConfirm = React.useCallback(async () => {
+    if (!confirmState.action) {
+      setConfirmState(prev => ({ ...prev, open: false }))
+      return
+    }
+    setConfirmBusy(true)
+    try {
+      await confirmState.action()
+    } finally {
+      setConfirmBusy(false)
+      setConfirmState(prev => ({ ...prev, open: false }))
+    }
+  }, [confirmState])
+
+  const refreshRegistry = React.useCallback(async (preferredUser?: string | null) => {
+    setLoading(true)
+    setError(null)
+    try {
+      const res = await fetchRegistry({ project: "pca2d", includeVectors: true, limitPerUser: 5000 })
+      setData(res)
+      if (res.users.length > 0) {
+        const nextUser = preferredUser && res.users.includes(preferredUser)
+          ? preferredUser
+          : res.users[0]
+        setSelectedUser(nextUser)
+      } else {
+        setSelectedUser(null)
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setLoading(false)
+    }
+  }, [])
 
   React.useEffect(() => {
     if (!open) return
-    let mounted = true
-    setLoading(true)
-    // Fetch with raw vectors for numeric rendering
-    fetchRegistry({ project: "pca2d", includeVectors: true, limitPerUser: 5000 })
-      .then((res) => {
-        if (!mounted) return
-        setData(res)
-        if (res.users.length > 0) setSelectedUser(res.users[0])
-      })
-      .catch((e) => { if (mounted) setError(String(e?.message || e)) })
-      .finally(() => { if (mounted) setLoading(false) })
-    return () => { mounted = false }
+    refreshRegistry(selectedUser)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
 
   const filteredUsers = React.useMemo(() => {
@@ -87,32 +136,51 @@ export default function RegistryDialog({ open, onOpenChange }: RegistryDialogPro
                     </li>
                   ))}
                   {filteredUsers.length === 0 && (
-                    <li className="px-3 py-4 text-sm text-muted-foreground">No users</li>
+                    <li className="px-3 py-4 text-sm text-foreground/70">No users</li>
                   )}
                 </ul>
               </ScrollArea>
               {selectedUser && (
                 <div className="p-3 border-t flex items-center justify-between">
-                  <div className="text-xs text-muted-foreground">
-                    Showing embeddings for <span className="font-medium">{selectedUser}</span>
+                  <div className="text-xs text-foreground/80">
+                    Showing embeddings for <span className="font-medium text-foreground">{selectedUser}</span>
                   </div>
-                  <Button size="sm" variant="destructive" disabled={busy}
-                    onClick={async () => {
-                      if (!selectedUser) return
-                      if (!confirm(`Delete ALL embeddings for '${selectedUser}'?`)) return
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    disabled={busy}
+                    onClick={() => {
+                      const userToDelete = selectedUser
+                      if (!userToDelete) return
+                      openConfirm({
+                        title: `Delete '${userToDelete}'?`,
+                        description: "All embeddings for this user will be permanently removed.",
+                        confirmLabel: "Delete",
+                        variant: "destructive",
+                        action: async () => {
                       setBusy(true)
                       try {
-                        await deleteRegistryUser(selectedUser)
-                        // refresh
-                        const res = await fetchRegistry({ project: "pca2d", includeVectors: true, limitPerUser: 5000 })
-                        setData(res)
-                        setSelectedUser(null)
-                      } catch (e: any) {
-                        alert(e?.message || String(e))
+                            const result = await deleteRegistryUser(userToDelete)
+                            toast({
+                              title: "User deleted",
+                              description: `${result.deleted || userToDelete} removed from registry.`
+                            })
+                            await refreshRegistry(null)
+                          } catch (e) {
+                            toast({
+                              variant: "destructive",
+                              title: "Delete failed",
+                              description: e instanceof Error ? e.message : String(e)
+                            })
                       } finally {
                         setBusy(false)
                       }
-                    }}>Delete user</Button>
+                        }
+                      })
+                    }}
+                  >
+                    Delete user
+                  </Button>
                 </div>
               )}
             </div>
@@ -121,7 +189,7 @@ export default function RegistryDialog({ open, onOpenChange }: RegistryDialogPro
             <div className="md:col-span-2 border rounded-lg">
               <div className="flex items-center justify-between p-3 border-b">
                 <div className="text-sm font-medium">Embedding Vectors</div>
-                <div className="text-xs text-muted-foreground">
+                <div className="text-xs text-foreground/80">
                   {selectedUser ? (
                     <>
                       <Badge className="mr-2" style={{ background: colorForUser(selectedUser), color: "#fff" }}>{selectedUser}</Badge>
@@ -139,22 +207,44 @@ export default function RegistryDialog({ open, onOpenChange }: RegistryDialogPro
                       <div className="px-3 py-2 text-xs font-medium bg-muted/60 border-b flex items-center justify-between">
                         <span>Embedding #{i + 1}</span>
                         <div className="flex items-center gap-2">
-                          <span className="text-muted-foreground">{vec.length} dims</span>
-                          <Button size="sm" variant="outline" disabled={busy}
-                            onClick={async () => {
-                              if (!selectedUser) return
-                              if (!confirm(`Delete embedding #${i + 1} for '${selectedUser}'?`)) return
+                          <span className="text-foreground/70">{vec.length} dims</span>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={busy}
+                            onClick={() => {
+                              const userId = selectedUser
+                              const embeddingIndex = i
+                              if (!userId) return
+                              openConfirm({
+                                title: `Delete embedding #${embeddingIndex + 1}?`,
+                                description: `This will remove embedding #${embeddingIndex + 1} for '${userId}'.`,
+                                confirmLabel: "Delete",
+                                variant: "destructive",
+                                action: async () => {
                               setBusy(true)
                               try {
-                                await deleteRegistryEmbedding(selectedUser, i)
-                                const res = await fetchRegistry({ project: "pca2d", includeVectors: true, limitPerUser: 5000 })
-                                setData(res)
-                              } catch (e: any) {
-                                alert(e?.message || String(e))
+                                    const result = await deleteRegistryEmbedding(userId, embeddingIndex)
+                                    toast({
+                                      title: "Embedding deleted",
+                                      description: `Removed embedding #${(result.deleted_index ?? embeddingIndex) + 1} for ${userId}.`
+                                    })
+                                    await refreshRegistry(userId)
+                                  } catch (e) {
+                                    toast({
+                                      variant: "destructive",
+                                      title: "Delete failed",
+                                      description: e instanceof Error ? e.message : String(e)
+                                    })
                               } finally {
                                 setBusy(false)
                               }
-                            }}>Delete</Button>
+                                }
+                              })
+                            }}
+                          >
+                            Delete
+                          </Button>
                         </div>
                       </div>
                       <div className="px-3 py-2 font-mono text-[11px] leading-relaxed text-foreground/90 whitespace-pre-wrap break-words">
@@ -163,10 +253,10 @@ export default function RegistryDialog({ open, onOpenChange }: RegistryDialogPro
                     </div>
                   ))}
                   {selectedUser && (data?.vectors?.[selectedUser]?.length ?? 0) === 0 && (
-                    <div className="text-sm text-muted-foreground">No vectors available for this user.</div>
+                    <div className="text-sm text-foreground/70">No vectors available for this user.</div>
                   )}
                   {!selectedUser && (
-                    <div className="text-sm text-muted-foreground">Choose a user from the left panel.</div>
+                    <div className="text-sm text-foreground/70">Choose a user from the left panel.</div>
                   )}
                 </div>
               </ScrollArea>
@@ -174,6 +264,31 @@ export default function RegistryDialog({ open, onOpenChange }: RegistryDialogPro
           </div>
         </div>
       </DialogContent>
+      <AlertDialog open={confirmState.open} onOpenChange={(open) => setConfirmState(prev => ({ ...prev, open }))}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{confirmState.title}</AlertDialogTitle>
+            {confirmState.description && (
+              <AlertDialogDescription>{confirmState.description}</AlertDialogDescription>
+            )}
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={confirmBusy}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirm}
+              disabled={confirmBusy}
+              className={cn(
+                "inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-semibold transition-colors",
+                confirmState.variant === "destructive"
+                  ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  : "bg-primary text-primary-foreground hover:bg-primary/90"
+              )}
+            >
+              {confirmBusy ? "Processing..." : (confirmState.confirmLabel ?? "Confirm")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   )
 }

@@ -1,0 +1,6 @@
+{"timestamp": "2025-11-07T15:56:28.565849Z", "user_id": "Nguyen Le Truong Thien", "match_score": 0.9850362539291382, "liveness_score": 0.7020055866779871, "emotion_label": null, "emotion_confidence": null}
+{"timestamp": "2025-11-07T15:58:40.966747Z", "user_id": "Nguyen Le Truong Thien", "match_score": 0.9835041165351868, "liveness_score": 0.700242624223818, "emotion_label": "sad", "emotion_confidence": 0.8942630732423819}
+{"timestamp": "2025-11-07T15:59:53.338725Z", "user_id": "Nguyen Le Truong Thien", "match_score": 0.984356164932251, "liveness_score": 0.6984221431774138, "emotion_label": "fear", "emotion_confidence": 0.5636221422653177}
+{"timestamp": "2025-11-07T16:09:55.449973Z", "user_id": "Nguyen Le Truong Thien", "type": "check-in", "match_score": 0.9864185452461243, "liveness_score": 0.7027797110275267, "emotion_label": "fear", "emotion_confidence": 0.8113577257904702}
+{"timestamp": "2025-11-07T16:09:59.148409Z", "user_id": "Nguyen Le Truong Thien", "type": "check-out", "match_score": 0.9904651045799255, "liveness_score": 0.704528380190822, "emotion_label": "fear", "emotion_confidence": 0.9609488684551118}
+{"timestamp": "2025-11-07T16:19:09.889286Z", "user_id": "Nguyen Le Truong Thien", "type": "check-in", "match_score": 0.9874852299690247, "liveness_score": 0.7009417244594028, "emotion_label": "fear", "emotion_confidence": 0.9747275177785174}

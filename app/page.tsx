@@ -4,13 +4,14 @@ import { useState, useEffect } from "react"
 import { Header } from "@/components/header"
 import { WebcamSection } from "@/components/webcam-section"
 import { ResultsCard } from "@/components/results-card"
-import { EvaluationSection } from "@/components/evaluation-section"
+import { AttendanceHistory } from "@/components/attendance-history"
 import { Footer } from "@/components/footer"
 import { Toaster } from "@/components/ui/toaster"
 import type { VerifyResponse } from "@/lib/api"
 
 export default function Page() {
   const [isDark, setIsDark] = useState(false)
+  const [isBaseTheme, setIsBaseTheme] = useState(false)
   const [isOnline, setIsOnline] = useState(true)
   const [mounted, setMounted] = useState(false)
   const [verifyResult, setVerifyResult] = useState<VerifyResponse | null>(null)
@@ -18,13 +19,23 @@ export default function Page() {
 
   useEffect(() => {
     setMounted(true)
+    const root = document.documentElement
     const savedTheme = localStorage.getItem("theme")
+    const savedStyle = localStorage.getItem("theme-style")
+
     if (savedTheme === "dark") {
       setIsDark(true)
-      document.documentElement.classList.add("dark")
+      root.classList.add("dark")
     } else if (savedTheme === "light") {
       setIsDark(false)
-      document.documentElement.classList.remove("dark")
+      root.classList.remove("dark")
+    }
+
+    if (savedStyle === "base") {
+      setIsBaseTheme(true)
+      root.classList.add("theme-base")
+    } else {
+      root.classList.remove("theme-base")
     }
   }, [])
 
@@ -32,10 +43,23 @@ export default function Page() {
     const newIsDark = !isDark
     setIsDark(newIsDark)
     localStorage.setItem("theme", newIsDark ? "dark" : "light")
+    const root = document.documentElement
     if (newIsDark) {
-      document.documentElement.classList.add("dark")
+      root.classList.add("dark")
     } else {
-      document.documentElement.classList.remove("dark")
+      root.classList.remove("dark")
+    }
+  }
+
+  const toggleThemeStyle = () => {
+    const next = !isBaseTheme
+    setIsBaseTheme(next)
+    localStorage.setItem("theme-style", next ? "base" : "neo")
+    const root = document.documentElement
+    if (next) {
+      root.classList.add("theme-base")
+    } else {
+      root.classList.remove("theme-base")
     }
   }
 
@@ -49,10 +73,15 @@ export default function Page() {
   if (!mounted) return null
 
   return (
-    <div className={isDark ? "dark" : ""}>
+    <div className={`${isDark ? "dark" : ""} ${isBaseTheme ? "theme-base" : ""}`}>
       <div className="min-h-screen flex flex-col bg-background text-foreground transition-colors duration-200">
         {/* Header */}
-        <Header isDark={isDark} onToggleTheme={toggleTheme} />
+        <Header
+          isDark={isDark}
+          onToggleTheme={toggleTheme}
+          isBaseTheme={isBaseTheme}
+          onToggleThemeStyle={toggleThemeStyle}
+        />
 
         {/* Main Content */}
         <main className="flex-1 py-16">
@@ -66,15 +95,13 @@ export default function Page() {
             <div id="results">
               <ResultsCard verifyResult={verifyResult} verifyHistory={verifyHistory} />
             </div>
+
+            {/* Attendance History Section - Full Width */}
+            <div id="attendance">
+              <AttendanceHistory verifyResult={verifyResult} />
+            </div>
           </div>
         </main>
-
-        {/* Evaluation Section - At the bottom, always visible */}
-        <section id="evaluation" className="py-16 bg-muted/30 border-t border-border">
-          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            <EvaluationSection verifyResults={verifyHistory} />
-          </div>
-        </section>
 
         {/* Footer */}
         <Footer />

@@ -192,11 +192,11 @@ export function RegisterDrawer() {
                         />
                         <button
                           onClick={() => removeImage(index)}
-                          className="absolute top-1 right-1 p-1 rounded-full bg-red-500/90 text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                          className="absolute top-1 right-1 p-1 rounded-full bg-destructive/90 text-destructive-foreground opacity-0 group-hover:opacity-100 transition-opacity"
                         >
                           <X className="h-3.5 w-3.5" />
                         </button>
-                        <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-[10px] px-2 py-1 text-center">
+                        <div className="absolute bottom-0 left-0 right-0 bg-background/80 backdrop-blur-sm text-foreground text-[10px] px-2 py-1 text-center border-t border-border">
                           Image {index + 1}
                         </div>
                       </motion.div>
@@ -209,8 +209,8 @@ export function RegisterDrawer() {
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
                     >
-                      <Upload className="h-8 w-8 text-muted-foreground" />
-                      <span className="text-xs text-muted-foreground font-medium text-center px-2">
+                      <Upload className="h-8 w-8 text-foreground/70" />
+                      <span className="text-xs text-foreground/80 font-medium text-center px-2">
                         Add Image
                       </span>
                     </motion.div>
@@ -222,9 +222,9 @@ export function RegisterDrawer() {
                   onClick={() => fileInputRef.current?.click()}
                 >
                   <div className="text-center">
-                    <Upload className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-                    <span className="text-sm text-muted-foreground font-medium">Click to select images</span>
-                    <span className="text-xs text-muted-foreground block mt-1">Up to {MAX_IMAGES} images</span>
+                    <Upload className="h-8 w-8 text-foreground/70 mx-auto mb-2" />
+                    <span className="text-sm text-foreground/80 font-medium">Click to select images</span>
+                    <span className="text-xs text-foreground/70 block mt-1">Up to {MAX_IMAGES} images</span>
                   </div>
                 </div>
               )}

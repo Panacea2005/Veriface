@@ -13,6 +13,7 @@ export interface VerifyResponse {
   emotion_confidence: number
   emotion_probs?: Record<string, number>
   bbox?: { x: number; y: number; w: number; h: number }
+  check_type?: "check-in" | "check-out"
   all_scores?: Array<{
     user_id: string
     score: number
@@ -44,32 +45,6 @@ export interface HealthResponse {
     total_embeddings?: number
     users?: string[]
     error?: string
-  }
-}
-
-export interface MetricsResponse {
-  auc: number
-  eer: number
-  accuracy: number
-  precision: number
-  recall: number
-  // Optional detailed metrics
-  faceVerification?: {
-    tp: number
-    fp: number
-    fn: number
-    tn: number
-    tpr: number
-    fpr: number
-  }
-  liveness?: {
-    apcer: number
-    bpcer: number
-    acer: number
-  }
-  emotion?: {
-    macroF1: number
-    accuracy: number
   }
 }
 
@@ -218,18 +193,149 @@ export async function clearRegistry(): Promise<{ status: string; message: string
   return response.json()
 }
 
+export interface AttendanceRecord {
+  timestamp: string
+  user_id: string
+  type?: "check-in" | "check-out"
+  match_score: number
+  liveness_score: number
+  emotion_label?: string
+  emotion_confidence?: number
+  user_name?: string
+  department?: string
+}
+
+export interface AttendanceResponse {
+  records: AttendanceRecord[]
+  count: number
+}
+
+export interface AttendanceStats {
+  total_records: number
+  unique_users: number
+  by_date: Record<string, number>
+  by_user: Record<string, number>
+  by_emotion: Record<string, number>
+  by_type: Record<string, number>
+  daily_trends: Record<string, number>
+}
+
+export interface UserMetadata {
+  name?: string
+  department?: string
+  email?: string
+}
+
 /**
- * Get ROC metrics
+ * Get attendance records
  */
-export async function getMetrics(): Promise<MetricsResponse | null> {
-  const response = await fetch(`${API_BASE_URL}/api/roc`)
+export async function getAttendance(params?: {
+  limit?: number
+  userId?: string
+  dateFrom?: string
+  dateTo?: string
+}): Promise<AttendanceResponse> {
+  const searchParams = new URLSearchParams()
+  if (params?.limit) searchParams.append("limit", params.limit.toString())
+  if (params?.userId) searchParams.append("user_id", params.userId)
+  if (params?.dateFrom) searchParams.append("date_from", params.dateFrom)
+  if (params?.dateTo) searchParams.append("date_to", params.dateTo)
+
+  const url = `${API_BASE_URL}/api/attendance${searchParams.toString() ? `?${searchParams.toString()}` : ""}`
+  const response = await fetch(url)
   if (!response.ok) {
-    if (response.status === 404) {
-      // No metrics available yet
-      return null
-    }
-    throw new Error("Failed to fetch metrics")
+    throw new Error("Failed to fetch attendance records")
   }
   return response.json()
 }
 
+/**
+ * Get attendance statistics
+ */
+export async function getAttendanceStats(params?: {
+  userId?: string
+  dateFrom?: string
+  dateTo?: string
+}): Promise<AttendanceStats> {
+  const searchParams = new URLSearchParams()
+  if (params?.userId) searchParams.append("user_id", params.userId)
+  if (params?.dateFrom) searchParams.append("date_from", params.dateFrom)
+  if (params?.dateTo) searchParams.append("date_to", params.dateTo)
+
+  const url = `${API_BASE_URL}/api/attendance/stats${searchParams.toString() ? `?${searchParams.toString()}` : ""}`
+  const response = await fetch(url)
+  if (!response.ok) {
+    throw new Error("Failed to fetch attendance statistics")
+  }
+  return response.json()
+}
+
+/**
+ * Export attendance records
+ */
+export async function exportAttendance(params?: {
+  format?: "csv" | "json"
+  userId?: string
+  dateFrom?: string
+  dateTo?: string
+}): Promise<Blob> {
+  const searchParams = new URLSearchParams()
+  searchParams.append("format", params?.format || "csv")
+  if (params?.userId) searchParams.append("user_id", params.userId)
+  if (params?.dateFrom) searchParams.append("date_from", params.dateFrom)
+  if (params?.dateTo) searchParams.append("date_to", params.dateTo)
+
+  const url = `${API_BASE_URL}/api/attendance/export?${searchParams.toString()}`
+  const response = await fetch(url)
+  if (!response.ok) {
+    throw new Error("Failed to export attendance")
+  }
+  return response.blob()
+}
+
+/**
+ * Get user metadata
+ */
+export async function getUserMetadata(): Promise<Record<string, UserMetadata>> {
+  const response = await fetch(`${API_BASE_URL}/api/users/metadata`)
+  if (!response.ok) {
+    throw new Error("Failed to fetch user metadata")
+  }
+  return response.json()
+}
+
+/**
+ * Set user metadata
+ */
+export async function setUserMetadata(
+  userId: string,
+  metadata: Partial<UserMetadata>
+): Promise<{ status: string; user_id: string; metadata: UserMetadata }> {
+  const formData = new FormData()
+  formData.append("user_id", userId)
+  if (metadata.name) formData.append("name", metadata.name)
+  if (metadata.department) formData.append("department", metadata.department)
+  if (metadata.email) formData.append("email", metadata.email)
+
+  const response = await fetch(`${API_BASE_URL}/api/users/metadata`, {
+    method: "POST",
+    body: formData,
+  })
+  if (!response.ok) {
+    throw new Error("Failed to set user metadata")
+  }
+  return response.json()
+}
+
+/**
+ * Delete user metadata
+ */
+export async function deleteUserMetadata(userId: string): Promise<{ status: string; deleted: string }> {
+  const response = await fetch(`${API_BASE_URL}/api/users/metadata/${encodeURIComponent(userId)}`, {
+    method: "DELETE",
+  })
+  if (!response.ok) {
+    throw new Error("Failed to delete user metadata")
+  }
+  return response.json()
+}

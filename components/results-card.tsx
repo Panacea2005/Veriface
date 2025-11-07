@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { CheckCircle2, XCircle, AlertCircle, Eye, Clock, Activity, TrendingUp, Info } from "lucide-react"
+import { CheckCircle2, XCircle, AlertCircle, Eye, Clock, Activity, TrendingUp, Info, LogIn, LogOut } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -9,10 +9,25 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { motion, AnimatePresence } from "framer-motion"
 import type { VerifyResponse } from "@/lib/api"
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Legend } from "recharts"
 
 interface ResultsCardProps {
   verifyResult: VerifyResponse | null
   verifyHistory?: VerifyResponse[]
+}
+
+interface SessionMetrics {
+  totalVerifications: number
+  successfulMatches: number
+  failedMatches: number
+  avgLivenessScore: number
+  avgMatchScore: number
+  timestampedData: Array<{
+    index: string
+    liveness: number
+    matchScore: number | null
+  }>
 }
 
 interface DetailedLog {
@@ -28,6 +43,14 @@ interface DetailedLog {
 export function ResultsCard({ verifyResult, verifyHistory = [] }: ResultsCardProps) {
   const [logs, setLogs] = useState<DetailedLog[]>([])
   const [processingSteps, setProcessingSteps] = useState<Array<{ step: string; time: number }>>([])
+  const [sessionMetrics, setSessionMetrics] = useState<SessionMetrics>({
+    totalVerifications: 0,
+    successfulMatches: 0,
+    failedMatches: 0,
+    avgLivenessScore: 0,
+    avgMatchScore: 0,
+    timestampedData: []
+  })
   // Emotion UI moved to WebcamSection; no subscription needed here
 
   // Accumulate logs from all verification results
@@ -138,6 +161,55 @@ export function ResultsCard({ verifyResult, verifyHistory = [] }: ResultsCardPro
     }
   }, [verifyResult, verifyHistory])
 
+  const convertMatchScoreToPercent = (result: VerifyResponse): number | null => {
+    if (result.score === null || result.score === undefined) return null
+    if (result.metric === "cosine") {
+      return Math.max(0, Math.min(100, result.score * 100))
+    }
+    const distance = result.score
+    return Math.max(0, Math.min(100, (1 - Math.min(distance / 10, 1)) * 100))
+  }
+
+  useEffect(() => {
+    if (verifyHistory.length === 0) {
+      setSessionMetrics({
+        totalVerifications: 0,
+        successfulMatches: 0,
+        failedMatches: 0,
+        avgLivenessScore: 0,
+        avgMatchScore: 0,
+        timestampedData: []
+      })
+      return
+    }
+
+    const successful = verifyHistory.filter(r => r.matched_id !== null).length
+    const failed = verifyHistory.length - successful
+    const avgLiveness = verifyHistory.reduce((sum, r) => sum + r.liveness.score, 0) / verifyHistory.length
+    const matchScores = verifyHistory
+      .map(convertMatchScoreToPercent)
+      .filter((score): score is number => score !== null)
+
+    const avgMatch = matchScores.length > 0
+      ? matchScores.reduce((sum, value) => sum + value, 0) / matchScores.length
+      : 0
+
+    const timestampedData = verifyHistory.map((r, idx) => ({
+      index: `${idx + 1}`,
+      liveness: Math.max(0, Math.min(100, r.liveness.score * 100)),
+      matchScore: convertMatchScoreToPercent(r)
+    }))
+
+    setSessionMetrics({
+      totalVerifications: verifyHistory.length,
+      successfulMatches: successful,
+      failedMatches: failed,
+      avgLivenessScore: avgLiveness * 100,
+      avgMatchScore: avgMatch,
+      timestampedData
+    })
+  }, [verifyHistory])
+
   // Calculate match score - always show best score from backend
   const matchScore = verifyResult?.score !== null && verifyResult?.score !== undefined
     ? (verifyResult.metric === "cosine" 
@@ -175,6 +247,17 @@ export function ResultsCard({ verifyResult, verifyHistory = [] }: ResultsCardPro
       if (matchScore <= threshold) return "bg-green-600"
       if (matchScore <= threshold + 2) return "bg-amber-600"
       return "bg-red-600"
+    }
+  }
+
+  const chartConfig = {
+    liveness: {
+      label: "Liveness Score (%)",
+      color: "#3b82f6"
+    },
+    matchScore: {
+      label: "Match Score (%)",
+      color: "#10b981"
     }
   }
 
@@ -228,11 +311,11 @@ export function ResultsCard({ verifyResult, verifyHistory = [] }: ResultsCardPro
               >
                 <div className="flex items-end justify-between">
                   <div className="flex items-center gap-2">
-                  <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Match Score</span>
+                  <span className="text-xs font-medium text-foreground/80 uppercase tracking-wide">Match Score</span>
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                          <Info className="h-3.5 w-3.5 text-foreground/60 cursor-help" />
                         </TooltipTrigger>
                         <TooltipContent>
                           <p>Similarity score using {verifyResult.metric} distance metric</p>
@@ -257,7 +340,7 @@ export function ResultsCard({ verifyResult, verifyHistory = [] }: ResultsCardPro
                     transition={{ duration: 0.8, ease: "easeOut" }}
                   />
                 </div>
-                <div className="flex justify-between items-center text-xs text-muted-foreground">
+                <div className="flex justify-between items-center text-xs text-foreground/70">
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
@@ -316,7 +399,12 @@ export function ResultsCard({ verifyResult, verifyHistory = [] }: ResultsCardPro
                   </Tooltip>
                 </TooltipProvider>
 
-                {/* Emotion badge removed (shown in WebcamSection) */}
+                {verifyResult.emotion_label && (
+                  <Badge variant="outline" className="gap-1.5 rounded-lg">
+                    <Activity className="h-3.5 w-3.5 stroke-[1.5]" />
+                    {verifyResult.emotion_label.charAt(0).toUpperCase() + verifyResult.emotion_label.slice(1)}
+                  </Badge>
+                )}
 
                 {verifyResult.matched_id && (
                   <Badge variant="default" className="gap-1.5 rounded-lg">
@@ -325,6 +413,55 @@ export function ResultsCard({ verifyResult, verifyHistory = [] }: ResultsCardPro
                   </Badge>
                 )}
               </motion.div>
+
+              {/* Emotion from Verification */}
+              {verifyResult.emotion_label && verifyResult.emotion_probs && Object.keys(verifyResult.emotion_probs).length > 0 && (
+                <motion.div
+                  className="rounded-lg border border-border p-3"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.27 }}
+                >
+                  <div className="text-sm font-semibold mb-2">
+                    <span>Emotion (from verification)</span>
+                  </div>
+                  <div className="space-y-2 min-h-44">
+                    {Object.entries(verifyResult.emotion_probs)
+                      .sort((a, b) => b[1] - a[1])
+                      .map(([k, v]) => (
+                        <div key={k} className="flex items-center gap-2">
+                          <div className={`text-xs w-20 ${verifyResult.emotion_label === k ? "font-semibold text-foreground" : "text-foreground/70"}`}>{k}</div>
+                          <div className="flex-1 h-2 bg-muted rounded">
+                            <div className="h-2 bg-accent rounded" style={{ width: `${Math.min(100, Math.max(0, v * 100)).toFixed(0)}%` }} />
+                          </div>
+                          <div className="w-12 text-right text-xs tabular-nums">{(v * 100).toFixed(0)}%</div>
+                        </div>
+                      ))}
+                    {/* Dominant Emotion Highlight */}
+                    {(() => {
+                      const [k, v] = Object.entries(verifyResult.emotion_probs).sort((a,b)=>b[1]-a[1])[0]
+                      const em = k === "happy" ? "😊" : k === "sad" ? "😢" : k === "angry" ? "😠" : k === "surprise" ? "😲" : k === "fear" ? "😨" : k === "disgust" ? "🤢" : "😐"
+                      return (
+                        <div className="mt-4 pt-4 border-t border-border">
+                          <div className="rounded-lg bg-background border border-border p-3 flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <span className="text-3xl leading-none">{em}</span>
+                              <div className="flex flex-col">
+                                <span className="text-xs text-foreground/70 uppercase tracking-wide">Detected</span>
+                                <span className="text-base font-bold capitalize text-foreground">{k}</span>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <div className="text-2xl font-bold text-accent">{(v * 100).toFixed(0)}%</div>
+                              <div className="text-[10px] text-foreground/70 uppercase">Confidence</div>
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    })()}
+                  </div>
+                </motion.div>
+              )}
 
               {/* Registry Match Scores */}
               {verifyResult?.all_scores && verifyResult.all_scores.length > 0 && (
@@ -335,8 +472,8 @@ export function ResultsCard({ verifyResult, verifyHistory = [] }: ResultsCardPro
                   transition={{ delay: 0.28 }}
                 >
                   <div className="flex items-center gap-2">
-                    <TrendingUp className="h-3.5 w-3.5 text-muted-foreground" />
-                    <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    <TrendingUp className="h-3.5 w-3.5 text-foreground/70" />
+                    <h3 className="text-xs font-semibold uppercase tracking-wide text-foreground">
                       Registry Match Scores
                     </h3>
                     <Badge variant="outline" className="text-[10px] px-1.5 py-0">
@@ -347,10 +484,10 @@ export function ResultsCard({ verifyResult, verifyHistory = [] }: ResultsCardPro
                     <Table className="text-xs">
                       <TableHeader>
                         <TableRow className="border-b border-border hover:bg-transparent bg-muted/30">
-                          <TableHead className="h-8 px-3 py-2 font-medium text-muted-foreground">Rank</TableHead>
-                          <TableHead className="h-8 px-3 py-2 font-medium text-muted-foreground">User ID</TableHead>
-                          <TableHead className="h-8 px-3 py-2 font-medium text-muted-foreground text-right">Match %</TableHead>
-                          <TableHead className="h-8 px-3 py-2 font-medium text-muted-foreground text-right">Embeddings</TableHead>
+                          <TableHead className="h-8 px-3 py-2 font-medium text-foreground/80">Rank</TableHead>
+                          <TableHead className="h-8 px-3 py-2 font-medium text-foreground/80">User ID</TableHead>
+                          <TableHead className="h-8 px-3 py-2 font-medium text-foreground/80 text-right">Match %</TableHead>
+                          <TableHead className="h-8 px-3 py-2 font-medium text-foreground/80 text-right">Embeddings</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -372,11 +509,11 @@ export function ResultsCard({ verifyResult, verifyHistory = [] }: ResultsCardPro
                               transition={{ delay: 0.3 + idx * 0.03 }}
                             >
                               <TableCell className="px-3 py-2">
-                                <span className={`font-bold ${isMatched ? "text-green-600 dark:text-green-400" : isTopMatch ? "text-amber-600 dark:text-amber-400" : "text-muted-foreground"}`}>
+                                <span className={`font-bold ${isMatched ? "text-green-600 dark:text-green-400" : isTopMatch ? "text-amber-600 dark:text-amber-400" : "text-foreground/70"}`}>
                                   #{idx + 1}
                                 </span>
                               </TableCell>
-                              <TableCell className="px-3 py-2 font-medium">
+                              <TableCell className="px-3 py-2 font-medium text-foreground">
                                 <div className="flex items-center gap-2">
                                   {item.user_id}
                                   {isMatched && (
@@ -390,7 +527,7 @@ export function ResultsCard({ verifyResult, verifyHistory = [] }: ResultsCardPro
                                 <div className="flex items-center justify-end gap-2">
                                   <div className="w-20 bg-muted rounded-full h-1.5 overflow-hidden">
                                     <motion.div
-                                      className={`h-full ${isMatched ? "bg-green-600" : isTopMatch ? "bg-amber-600" : "bg-primary"}`}
+                                      className={`h-full ${isMatched ? "bg-green-600" : isTopMatch ? "bg-amber-600" : "bg-accent"}`}
                                       initial={{ width: 0 }}
                                       animate={{ width: `${item.percentage}%` }}
                                       transition={{ duration: 0.5, delay: 0.3 + idx * 0.03 }}
@@ -401,7 +538,7 @@ export function ResultsCard({ verifyResult, verifyHistory = [] }: ResultsCardPro
                                   </span>
                                 </div>
                               </TableCell>
-                              <TableCell className="px-3 py-2 text-right text-muted-foreground text-[10px]">
+                              <TableCell className="px-3 py-2 text-right text-foreground/70 text-[10px]">
                                 {item.embeddings_count}
                               </TableCell>
                             </motion.tr>
@@ -416,14 +553,123 @@ export function ResultsCard({ verifyResult, verifyHistory = [] }: ResultsCardPro
               {/* Matched User ID */}
               {verifyResult?.matched_id && (
                 <motion.div
-                  className="flex h-20 items-center justify-center rounded-xl border-2 border-primary/20 bg-primary/5 px-4"
+                  className="flex h-20 items-center justify-center rounded-xl border-2 border-accent/30 bg-accent/10 px-4"
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: 0.32 }}
                 >
                   <div className="text-center">
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Matched Identity</p>
-                    <p className="text-lg font-bold text-primary mt-1">{verifyResult.matched_id}</p>
+                    <p className="text-xs font-medium text-foreground/70 uppercase tracking-wide">Matched Identity</p>
+                    <p className="text-lg font-bold text-accent mt-1">{verifyResult.matched_id}</p>
+                    {verifyResult.check_type && (
+                      <Badge 
+                        className={`mt-2 ${
+                          verifyResult.check_type === "check-out"
+                            ? "bg-red-500/20 text-red-700 dark:text-red-400 border-red-500/40"
+                            : "bg-green-500/20 text-green-700 dark:text-green-400 border-green-500/40"
+                        }`}
+                        variant="outline"
+                      >
+                        {verifyResult.check_type === "check-out" ? (
+                          <>
+                            <LogOut className="h-3 w-3 mr-1" />
+                            Check-out
+                          </>
+                        ) : (
+                          <>
+                            <LogIn className="h-3 w-3 mr-1" />
+                            Check-in
+                          </>
+                        )}
+                      </Badge>
+                    )}
+                  </div>
+                </motion.div>
+              )}
+
+              {/* Session Metrics */}
+              {sessionMetrics.totalVerifications > 0 && (
+                <motion.div
+                  className="grid gap-4 lg:grid-cols-3"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.33 }}
+                >
+                  <div className="rounded-xl border border-border bg-muted/20 p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-foreground/70">Total Verifications</span>
+                      <span className="text-lg font-bold text-foreground">{sessionMetrics.totalVerifications}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-foreground/70">Successful Matches</span>
+                      <span className="text-lg font-bold text-green-600">{sessionMetrics.successfulMatches}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-foreground/70">Failed Matches</span>
+                      <span className="text-lg font-bold text-amber-600">{sessionMetrics.failedMatches}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-foreground/70">Avg Liveness</span>
+                      <span className="text-lg font-bold text-foreground">{sessionMetrics.avgLivenessScore.toFixed(1)}%</span>
+                    </div>
+                    {sessionMetrics.avgMatchScore > 0 && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-foreground/70">Avg Match Score</span>
+                        <span className="text-lg font-bold text-foreground">{sessionMetrics.avgMatchScore.toFixed(1)}%</span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="lg:col-span-2 rounded-xl border border-border bg-muted/10 p-4">
+                    {sessionMetrics.timestampedData.length > 0 ? (
+                      <ChartContainer config={chartConfig} className="h-[260px] w-full" id="session-performance">
+                        <LineChart
+                          data={sessionMetrics.timestampedData}
+                          margin={{ top: 10, right: 20, left: 10, bottom: 40 }}
+                          width={undefined}
+                          height={260}
+                        >
+                          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
+                          <XAxis
+                            dataKey="index"
+                            label={{ value: "Verification #", position: "insideBottom", offset: -10, style: { fontSize: 11 } }}
+                            tick={{ fontSize: 10, fill: "hsl(var(--foreground))" }}
+                            stroke="hsl(var(--border))"
+                          />
+                          <YAxis
+                            domain={[0, 100]}
+                            tickFormatter={(value) => `${value}%`}
+                            tick={{ fontSize: 10, fill: "hsl(var(--foreground))" }}
+                            stroke="hsl(var(--border))"
+                          />
+                          <ChartTooltip content={<ChartTooltipContent />} />
+                          <Legend verticalAlign="top" height={32} iconType="line" />
+                          <Line
+                            type="monotone"
+                            dataKey="liveness"
+                            stroke="#3b82f6"
+                            strokeWidth={3}
+                            activeDot={{ r: 6, fill: "#3b82f6" }}
+                            dot={{ r: 4, fill: "#3b82f6" }}
+                            name="Liveness Score"
+                          />
+                          <Line
+                            type="monotone"
+                            dataKey="matchScore"
+                            stroke="#10b981"
+                            strokeWidth={3}
+                            activeDot={{ r: 6, fill: "#10b981" }}
+                            dot={{ r: 4, fill: "#10b981" }}
+                            name="Match Score"
+                            strokeDasharray="6 4"
+                            connectNulls
+                          />
+                        </LineChart>
+                      </ChartContainer>
+                    ) : (
+                      <div className="flex h-[260px] items-center justify-center rounded-lg border border-dashed border-border bg-muted/30">
+                        <p className="text-xs text-muted-foreground">Run verifications to see session performance</p>
+                      </div>
+                    )}
                   </div>
                 </motion.div>
               )}
@@ -437,22 +683,22 @@ export function ResultsCard({ verifyResult, verifyHistory = [] }: ResultsCardPro
                   transition={{ delay: 0.35 }}
                 >
                   <div className="flex items-center gap-2">
-                    <Clock className="h-3.5 w-3.5 text-muted-foreground" />
-                    <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Processing Timeline</h3>
+                    <Clock className="h-3.5 w-3.5 text-foreground/70" />
+                    <h3 className="text-xs font-semibold uppercase tracking-wide text-foreground">Processing Timeline</h3>
                   </div>
                   <div className="flex items-center gap-1 overflow-x-auto pb-2">
                     {processingSteps.map((step, idx) => (
                       <div key={idx} className="flex items-center gap-1 flex-shrink-0">
                         <div className="text-center min-w-[60px]">
-                          <div className="text-[10px] font-medium text-muted-foreground">{step.step}</div>
-                          <div className="text-[10px] text-muted-foreground/70">{step.time}ms</div>
+                          <div className="text-[10px] font-medium text-foreground/80">{step.step}</div>
+                          <div className="text-[10px] text-foreground/60">{step.time}ms</div>
                         </div>
                         {idx < processingSteps.length - 1 && (
                           <div className="w-4 h-0.5 bg-border mx-1" />
                         )}
                       </div>
                     ))}
-                    <div className="text-[10px] text-muted-foreground ml-2">
+                    <div className="text-[10px] text-foreground/70 ml-2">
                       Total: ~{processingSteps.reduce((sum, s) => sum + s.time, 0)}ms
                     </div>
                   </div>
@@ -468,19 +714,19 @@ export function ResultsCard({ verifyResult, verifyHistory = [] }: ResultsCardPro
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.4 }}
               >
-                <div className="flex items-center gap-2">
-                  <Activity className="h-3.5 w-3.5 text-muted-foreground" />
-                  <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Processing Pipeline</h3>
-                </div>
+                  <div className="flex items-center gap-2">
+                    <Activity className="h-3.5 w-3.5 text-foreground/70" />
+                    <h3 className="text-xs font-semibold uppercase tracking-wide text-foreground">Processing Pipeline</h3>
+                  </div>
                 <div className="rounded-xl border border-border" style={{ maxHeight: "400px", overflowY: "auto", overflowX: "auto" }}>
                   <Table className="text-xs">
                     <TableHeader className="sticky top-0 z-10 bg-muted/95 backdrop-blur supports-[backdrop-filter]:bg-muted/80">
                       <TableRow className="border-b border-border hover:bg-transparent bg-muted/30">
-                        <TableHead className="h-9 px-3 py-2 font-medium text-muted-foreground w-[180px] sticky left-0 bg-muted/95 backdrop-blur supports-[backdrop-filter]:bg-muted/80 z-10">Timestamp</TableHead>
-                        <TableHead className="h-9 px-3 py-2 font-medium text-muted-foreground">Event</TableHead>
-                        <TableHead className="h-9 px-3 py-2 font-medium text-muted-foreground">Details</TableHead>
-                        <TableHead className="h-9 px-3 py-2 font-medium text-muted-foreground w-[80px]">Duration</TableHead>
-                        <TableHead className="h-9 px-3 py-2 font-medium text-muted-foreground w-[100px]">Status</TableHead>
+                        <TableHead className="h-9 px-3 py-2 font-medium text-foreground/80 w-[180px] sticky left-0 bg-muted/95 backdrop-blur supports-[backdrop-filter]:bg-muted/80 z-10">Timestamp</TableHead>
+                        <TableHead className="h-9 px-3 py-2 font-medium text-foreground/80">Event</TableHead>
+                        <TableHead className="h-9 px-3 py-2 font-medium text-foreground/80">Details</TableHead>
+                        <TableHead className="h-9 px-3 py-2 font-medium text-foreground/80 w-[80px]">Duration</TableHead>
+                        <TableHead className="h-9 px-3 py-2 font-medium text-foreground/80 w-[100px]">Status</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -493,12 +739,12 @@ export function ResultsCard({ verifyResult, verifyHistory = [] }: ResultsCardPro
                           animate={{ opacity: 1, x: 0 }}
                           transition={{ delay: 0.4 + idx * 0.05 }}
                         >
-                            <TableCell className="px-3 py-2 font-mono text-muted-foreground text-[10px]">
-                            {log.timestamp}
-                          </TableCell>
-                            <TableCell className="px-3 py-2 text-xs font-medium">{log.event}</TableCell>
-                            <TableCell className="px-3 py-2 text-xs text-muted-foreground">{log.details || "-"}</TableCell>
-                            <TableCell className="px-3 py-2 text-xs text-muted-foreground font-mono">{log.duration || "-"}</TableCell>
+                            <TableCell className="px-3 py-2 font-mono text-foreground/70 text-[10px]">
+                              {log.timestamp}
+                            </TableCell>
+                            <TableCell className="px-3 py-2 text-xs font-medium text-foreground">{log.event}</TableCell>
+                            <TableCell className="px-3 py-2 text-xs text-foreground/80">{log.details || "-"}</TableCell>
+                            <TableCell className="px-3 py-2 text-xs text-foreground/70 font-mono">{log.duration || "-"}</TableCell>
                           <TableCell className="px-3 py-2">
                             <Badge
                               variant="outline"
@@ -517,10 +763,10 @@ export function ResultsCard({ verifyResult, verifyHistory = [] }: ResultsCardPro
               </motion.div>
             </>
           ) : (
-            <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
+            <div className="flex flex-col items-center justify-center h-64 text-foreground/70">
               <Activity className="h-12 w-12 opacity-40 mb-3" />
-              <span className="text-sm font-medium">No verification results yet</span>
-              <span className="text-xs mt-1">Upload an image and verify above to see results</span>
+              <span className="text-sm font-medium text-foreground">No verification results yet</span>
+              <span className="text-xs mt-1 text-foreground/70">Upload an image and verify above to see results</span>
             </div>
           )}
         </CardContent>

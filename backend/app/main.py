@@ -1,10 +1,11 @@
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from app.core.config import MODE, CORS_ORIGINS
-from app.routers import health, register, verify, metrics, registry as registry_router
+from app.core.config import CORS_ORIGINS
+from app.routers import health, register, verify, registry as registry_router
 from app.routers import emotion_logs
 from app.routers import emotion_rt
+from app.routers import attendance
 import traceback
 import sys
 import os
@@ -24,16 +25,15 @@ app.add_middleware(
 app.include_router(health.router)
 app.include_router(register.router)
 app.include_router(verify.router)
-app.include_router(metrics.router)
 app.include_router(registry_router.router)
 app.include_router(emotion_logs.router)
 app.include_router(emotion_rt.router)
+app.include_router(attendance.router)
 
 @app.on_event("startup")
 async def startup_event():
-    """Initialize models based on MODE."""
-    print(f"Starting Veriface API in {MODE} mode...", file=sys.stderr)
-    print(f"MODE environment variable: {os.getenv('MODE', 'not set')}", file=sys.stderr)
+    """Initialize API server."""
+    print("Starting Veriface API...", file=sys.stderr)
     # Models are lazy-loaded when first used
 
 @app.exception_handler(Exception)
