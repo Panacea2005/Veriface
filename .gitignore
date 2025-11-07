@@ -25,3 +25,20 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# model files (large files)
+*.pth
+*.onnx
+*.pt
+*.pkl
+*.h5
+*.pb
+*.tflite
+*.weights
+*.ckpt
+*.safetensors
+
+# model directories
+backend/app/models/*.pth
+backend/app/models/*.onnx
+backend/app/models/*.pt
