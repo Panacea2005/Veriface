@@ -8,6 +8,7 @@ import io
 import sys
 
 from app.pipelines.detector import FaceDetector
+from app.core.config import SIMILARITY_METRIC
 from app.pipelines.embedding import EmbedModel
 from app.pipelines.liveness import LivenessModel
 from app.pipelines.emotion import EmotionModel
@@ -23,8 +24,6 @@ similarity_matcher = SimilarityMatcher()
 
 @router.post("/api/verify")
 async def verify(
-    model: Literal["A", "B"] = Form("A"),
-    metric: Literal["cosine", "euclidean"] = Form("cosine"),
     image: Optional[UploadFile] = File(None),
     image_b64: Optional[str] = Form(None)
 ):
@@ -33,7 +32,8 @@ async def verify(
     Returns liveness, match result, emotion, etc.
     """
     try:
-        print(f"[DEBUG] Verify request - model: {model}, metric: {metric}", file=sys.stderr)
+        metric: Literal["cosine", "euclidean"] = SIMILARITY_METRIC  # env-driven
+        print(f"[DEBUG] Verify request - metric: {metric}", file=sys.stderr)
         
         # Load image
         if image:
@@ -87,10 +87,13 @@ async def verify(
             print(f"[DEBUG] Face detection exception: {type(e).__name__}: {e}", file=sys.stderr)
             raise HTTPException(status_code=400, detail=f"Face detection failed: {str(e)}")
         
-        # Liveness check
+        # Liveness check using DeepFace's MiniFASNet (Silent-Face-Anti-Spoofing)
+        # MiniFASNet analyzes texture, depth, moiré patterns, and color to detect spoofs
+        # Works directly on the full image to get proper context
         try:
-            print(f"[DEBUG] Running liveness check...", file=sys.stderr)
-            liveness = liveness_model.predict(face_aligned)
+            print(f"[DEBUG] Running liveness check with DeepFace MiniFASNet...", file=sys.stderr)
+            # Pass the full frame (not just cropped face) for better context
+            liveness = liveness_model.predict(img)
             print(f"[DEBUG] Liveness result: {liveness}", file=sys.stderr)
             if not isinstance(liveness, dict) or "passed" not in liveness:
                 raise ValueError("Invalid liveness response")
@@ -98,16 +101,16 @@ async def verify(
             print(f"Warning: Liveness check failed: {e}, setting to 0% (blocked)", file=sys.stderr)
             liveness = {"score": 0.0, "passed": False}
         
-        # Block verification if liveness check fails
+        # Block verification if liveness check fails (spoof detected)
         if not liveness.get("passed", False):
             x, y, w, h = bbox
+            liveness_score = liveness.get('score', 0.0)
             raise HTTPException(
                 status_code=400,
-                detail=f"Liveness check failed (score: {liveness.get('score', 0.0):.2f}). Verification blocked for security."
+                detail=f"Anti-spoof detection failed: Spoof detected (liveness score: {liveness_score:.2f}). Verification blocked for security. Please use a real face."
             )
         
         # Prepare initial result
-        x, y, w, h = bbox
         result = {
             "liveness": liveness,
             "matched_id": None,
@@ -116,8 +119,7 @@ async def verify(
             "threshold": None,
             "emotion_label": None,
             "emotion_confidence": None,
-            "all_scores": [],
-            "bbox": {"x": int(x), "y": int(y), "w": int(w), "h": int(h)}
+            "all_scores": []
         }
         
         # Emotion detection (do this early so it's available for attendance logging)
@@ -141,7 +143,6 @@ async def verify(
                     "ts": datetime.utcnow().isoformat() + "Z",
                     "label": result["emotion_label"],
                     "confidence": result["emotion_confidence"],
-                    "bbox": result["bbox"],
                     "liveness": result["liveness"],
                 }
                 with open(STORE_DIR / "emotion_logs.jsonl", "a", encoding="utf-8") as f:
@@ -155,8 +156,8 @@ async def verify(
         
         # Extract embedding
         try:
-            print(f"[DEBUG] Extracting embedding with model {model}...", file=sys.stderr)
-            embed_model = EmbedModel(model_type=model)
+            print(f"[DEBUG] Extracting embedding...", file=sys.stderr)
+            embed_model = EmbedModel()
             model_type_used = "PyTorch" if embed_model.model is not None else "DeepFace"
             print(f"[DEBUG] Using {model_type_used} model for embedding extraction", file=sys.stderr)
             embedding = embed_model.extract(face_aligned)
@@ -222,7 +223,12 @@ async def verify(
                 if match:
                     matched_id, score = match
                     result["matched_id"] = matched_id
-                    print(f"[DEBUG] Match PASSED: {matched_id} with score {score:.4f}", file=sys.stderr)
+                    
+                    # Get user name from registry
+                    matched_name = registry.get_user_name(matched_id)
+                    result["matched_name"] = matched_name
+                    
+                    print(f"[DEBUG] Match PASSED: {matched_id} ({matched_name}) with score {score:.4f}", file=sys.stderr)
                     
                     # Log attendance for successful match
                     try:

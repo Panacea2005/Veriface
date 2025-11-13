@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { CheckCircle2, XCircle, AlertCircle, Eye, Clock, Activity, TrendingUp, Info, LogIn, LogOut } from "lucide-react"
+import { CheckCircle2, XCircle, AlertCircle, Eye, Clock, Activity, TrendingUp, Info, LogIn, LogOut, Smile } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -130,8 +130,8 @@ export function ResultsCard({ verifyResult, verifyHistory = [] }: ResultsCardPro
             status: result.matched_id ? "success" : "warning",
             details: result.score !== null && result.score !== undefined
               ? (result.matched_id
-                  ? `Matched: ${result.matched_id} (${result.metric === "cosine" ? (result.score * 100).toFixed(2) : result.score.toFixed(4)})`
-                  : `Best score: ${result.metric === "cosine" ? (result.score * 100).toFixed(2) + "%" : result.score.toFixed(4)} (below threshold)`)
+                  ? `Matched: ${result.matched_name || result.matched_id} (ID: ${result.matched_id}) - ${result.metric === "cosine" ? (result.score * 100).toFixed(2) + "%" : result.score.toFixed(4)}`
+                  : `Best score: ${result.metric === "cosine" ? (result.score * 100).toFixed(2) + "%" : result.score.toFixed(4)} (insufficient consensus - Hybrid mode requires 60% of angles to pass)`)
               : "No scores calculated",
             duration: "~50ms",
             verificationIndex: idx + 1
@@ -319,18 +319,48 @@ export function ResultsCard({ verifyResult, verifyHistory = [] }: ResultsCardPro
                         </TooltipTrigger>
                         <TooltipContent>
                           <p>Similarity score using {verifyResult.metric} distance metric</p>
+                          {matchScore === 0 && (
+                            <p className="text-xs text-yellow-400 mt-1">
+                              ⚠️ Insufficient consensus: Not enough face angles matched the required threshold
+                            </p>
+                          )}
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
                   </div>
-                  <motion.span
-                    className="text-3xl font-bold"
-                    initial={{ scale: 0.8 }}
-                    animate={{ scale: 1 }}
-                    transition={{ type: "spring", stiffness: 100 }}
-                  >
-                    {verifyResult.metric === "cosine" ? `${matchScore.toFixed(1)}%` : matchScore.toFixed(2)}
-                  </motion.span>
+                  <div className="flex items-center gap-2">
+                    <motion.span
+                      className="text-3xl font-bold"
+                      initial={{ scale: 0.8 }}
+                      animate={{ scale: 1 }}
+                      transition={{ type: "spring", stiffness: 100 }}
+                    >
+                      {verifyResult.metric === "cosine" ? `${matchScore.toFixed(1)}%` : matchScore.toFixed(2)}
+                    </motion.span>
+                    {!isMatched && matchScore > 0 && (
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Badge variant="outline" className="text-xs cursor-help bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 border-yellow-500/30">
+                              Below Threshold
+                            </Badge>
+                          </TooltipTrigger>
+                          <TooltipContent className="max-w-xs">
+                            <p className="font-medium">Why did verification fail?</p>
+                            <p className="text-xs mt-1">
+                              Using <span className="font-semibold">Delta-Margin</span>: Checks if top 2 scores have sufficient gap.
+                            </p>
+                            <p className="text-xs mt-1">
+                              <span className="text-yellow-400">⚠️</span> Score shown ({matchScore.toFixed(1)}%) is below the required threshold (55.0%) to confirm identity.
+                            </p>
+                            <p className="text-xs mt-1 text-foreground/70">
+                              This prevents false matches between similar faces (e.g., siblings) by requiring a clear winner.
+                            </p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    )}
+                  </div>
                 </div>
                 <div className="h-2 w-full overflow-hidden rounded-full bg-muted border border-border">
                   <motion.div
@@ -401,15 +431,35 @@ export function ResultsCard({ verifyResult, verifyHistory = [] }: ResultsCardPro
 
                 {verifyResult.emotion_label && (
                   <Badge variant="outline" className="gap-1.5 rounded-lg">
-                    <Activity className="h-3.5 w-3.5 stroke-[1.5]" />
+                    <Smile className="h-3.5 w-3.5 stroke-[1.5]" />
                     {verifyResult.emotion_label.charAt(0).toUpperCase() + verifyResult.emotion_label.slice(1)}
                   </Badge>
                 )}
 
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Badge variant="secondary" className="gap-1.5 rounded-lg cursor-help">
+                        <TrendingUp className="h-3.5 w-3.5 stroke-[1.5]" />
+                        Delta-Margin
+                      </Badge>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p className="font-medium">Delta-Margin Anti-Sibling Verification</p>
+                      <ul className="text-xs mt-1 list-disc list-inside space-y-0.5">
+                        <li>Requires clear winner: gap between 1st & 2nd score &gt; 0.20</li>
+                        <li>If scores too close → potential sibling → penalize</li>
+                        <li>Best method for preventing family false positives</li>
+                        <li>Used in face recognition competitions (SOTA)</li>
+                      </ul>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+
                 {verifyResult.matched_id && (
                   <Badge variant="default" className="gap-1.5 rounded-lg">
                     <Activity className="h-3.5 w-3.5 stroke-[1.5]" />
-                    ID: {verifyResult.matched_id}
+                    {verifyResult.matched_name || verifyResult.matched_id} (ID: {verifyResult.matched_id})
                   </Badge>
                 )}
               </motion.div>
@@ -553,34 +603,21 @@ export function ResultsCard({ verifyResult, verifyHistory = [] }: ResultsCardPro
               {/* Matched User ID */}
               {verifyResult?.matched_id && (
                 <motion.div
-                  className="flex h-20 items-center justify-center rounded-xl border-2 border-accent/30 bg-accent/10 px-4"
+                  className="flex justify-center px-2"
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: 0.32 }}
                 >
-                  <div className="text-center">
-                    <p className="text-xs font-medium text-foreground/70 uppercase tracking-wide">Matched Identity</p>
-                    <p className="text-lg font-bold text-accent mt-1">{verifyResult.matched_id}</p>
+                  <div className="w-full md:max-w-md rounded-xl border border-border bg-background px-5 py-4 text-center shadow-sm">
+                    <p className="text-[11px] font-medium text-foreground/60 uppercase tracking-[0.18em]">Matched Identity</p>
+                    <p className="mt-2 text-2xl font-bold text-foreground break-words">{verifyResult.matched_name || verifyResult.matched_id}</p>
+                    <p className="mt-1 text-sm font-mono text-foreground/60">{verifyResult.matched_id}</p>
                     {verifyResult.check_type && (
                       <Badge 
-                        className={`mt-2 ${
-                          verifyResult.check_type === "check-out"
-                            ? "bg-red-500/20 text-red-700 dark:text-red-400 border-red-500/40"
-                            : "bg-green-500/20 text-green-700 dark:text-green-400 border-green-500/40"
-                        }`}
-                        variant="outline"
+                        className="mt-3 h-6 px-2.5 text-[11px] font-semibold font-mono"
+                        variant={verifyResult.check_type === "check-out" ? "secondary" : "default"}
                       >
-                        {verifyResult.check_type === "check-out" ? (
-                          <>
-                            <LogOut className="h-3 w-3 mr-1" />
-                            Check-out
-                          </>
-                        ) : (
-                          <>
-                            <LogIn className="h-3 w-3 mr-1" />
-                            Check-in
-                          </>
-                        )}
+                        {verifyResult.check_type === "check-out" ? "OUT" : "IN"}
                       </Badge>
                     )}
                   </div>

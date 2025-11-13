@@ -1,15 +1,11 @@
-# Similarity thresholds
 similarity:
   cosine:
-    threshold: 0.75
+    threshold: 0.55  # Stricter for sibling discrimination (validated EER: 0.2344)
+    method: delta_margin  # Best for preventing sibling false positives
+    k: 2  # Top-K: Take top 2 out of 5 (not used for delta_margin)
+    vote_threshold: 0.6  # Hybrid: 60% of embeddings must pass
+    margin_threshold: 0.20  # Delta-Margin: min gap between 1st & 2nd (increased from 0.15)
   euclidean:
-    # For unit-normalized embeddings, euclidean relates to cosine by d = sqrt(2*(1-cos))
-    # Cosine 0.75 => d ≈ 0.707. Keep slightly conservative.
-    threshold: 0.72
+    threshold: 1.23
 
-# Liveness detection threshold
-# Optimized for DeepFace-based detection (more accurate than heuristic, similar to ONNX)
-# DeepFace provides better accuracy, so threshold can be more balanced
-anti_spoof:
-  threshold: 0.45  # Optimized for DeepFace - real faces typically score 0.5-0.9, spoofs score 0.1-0.4
-
+# Anti-spoof uses DeepFace argmax (no threshold)

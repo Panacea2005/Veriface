@@ -6,6 +6,7 @@ export interface VerifyResponse {
     passed: boolean
   }
   matched_id: string | null
+  matched_name?: string | null
   score: number | null
   metric: string
   threshold: number | null
@@ -31,8 +32,13 @@ export interface EmotionResponse {
 export interface RegisterResponse {
   status: string
   user_id: string
+  name: string
+  embedding_count: number
   model: string
   embedding_shape: number[]
+  images_processed?: number
+  images_total?: number
+  embeddings_saved?: number
 }
 
 export interface HealthResponse {
@@ -50,6 +56,7 @@ export interface HealthResponse {
 
 export interface RegistryResponse {
   users: string[]
+  names: Record<string, string>  // user_id -> name mapping
   counts: Record<string, number>
   embeddings2d: Array<{ user_id: string; index: number; x: number; y: number }>
   vectors?: Record<string, number[][]>
@@ -88,13 +95,15 @@ export async function checkHealth(): Promise<HealthResponse> {
  * Register a new face
  */
 export async function registerFace(
-  userId: string,
+  name: string,
   image: File | Blob,
-  model: "A" | "B" = "A"
+  userId?: string, // Optional: if provided, adds embedding to existing user
 ): Promise<RegisterResponse> {
   const formData = new FormData()
-  formData.append("user_id", userId)
-  formData.append("model", model)
+  formData.append("name", name)
+  if (userId) {
+    formData.append("user_id", userId)
+  }
   formData.append("image", image)
 
   const response = await fetch(`${API_BASE_URL}/api/register`, {
@@ -111,16 +120,43 @@ export async function registerFace(
 }
 
 /**
+ * Register a new face with multiple images (batch registration - each image saved separately)
+ */
+export async function registerFaceBatch(
+  name: string,
+  images: File[] | Blob[],
+  userId?: string, // Optional: if provided, adds embeddings to existing user
+): Promise<RegisterResponse> {
+  const formData = new FormData()
+  formData.append("name", name)
+  if (userId) {
+    formData.append("user_id", userId)
+  }
+  
+  images.forEach((image) => {
+    formData.append("images", image)
+  })
+
+  const response = await fetch(`${API_BASE_URL}/api/register/batch`, {
+    method: "POST",
+    body: formData,
+  })
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ detail: "Batch registration failed" }))
+    throw new Error(error.detail || "Batch registration failed")
+  }
+
+  return response.json()
+}
+
+/**
  * Verify a face
  */
 export async function verifyFace(
   image: File | Blob,
-  model: "A" | "B" = "A",
-  metric: "cosine" | "euclidean" = "cosine"
 ): Promise<VerifyResponse> {
   const formData = new FormData()
-  formData.append("model", model)
-  formData.append("metric", metric)
   formData.append("image", image)
 
   const response = await fetch(`${API_BASE_URL}/api/verify`, {
@@ -130,7 +166,12 @@ export async function verifyFace(
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ detail: "Verification failed" }))
-    throw new Error(error.detail || "Verification failed")
+    const errorMessage = error.detail || "Verification failed"
+    // Create error object that won't trigger Next.js error boundary for expected errors
+    const err = new Error(errorMessage)
+    // Mark as handled to prevent Next.js error boundary
+    ;(err as any).handled = true
+    throw err
   }
 
   return response.json()
@@ -196,12 +237,13 @@ export async function clearRegistry(): Promise<{ status: string; message: string
 export interface AttendanceRecord {
   timestamp: string
   user_id: string
+  name?: string  // User's name from registry (new field)
   type?: "check-in" | "check-out"
   match_score: number
   liveness_score: number
   emotion_label?: string
   emotion_confidence?: number
-  user_name?: string
+  user_name?: string  // Legacy field (kept for compatibility)
   department?: string
 }
 
@@ -212,7 +254,10 @@ export interface AttendanceResponse {
 
 export interface AttendanceStats {
   total_records: number
+  total_entries: number  // Alias for total_records
   unique_users: number
+  check_ins: number
+  check_outs: number
   by_date: Record<string, number>
   by_user: Record<string, number>
   by_emotion: Record<string, number>

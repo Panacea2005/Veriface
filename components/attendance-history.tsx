@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 import { getAttendance, getAttendanceStats, exportAttendance, getUserMetadata, type AttendanceRecord, type AttendanceStats, type VerifyResponse } from "@/lib/api"
@@ -17,19 +18,24 @@ interface AttendanceHistoryProps {
   verifyResult?: VerifyResponse | null
 }
 
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d', '#ffc658']
+// Emotion order to ensure consistent display
+const EMOTION_ORDER = ['happy', 'surprise', 'neutral', 'sad', 'angry', 'fear', 'disgust']
 
-// Emotion order to ensure consistent color mapping
-const EMOTION_ORDER = ['angry', 'disgust', 'fear', 'happy', 'sad', 'surprise', 'neutral']
+// Emotion colors that match the emotion meaning
+const EMOTION_COLORS: Record<string, string> = {
+  'angry': '#EF4444',      // Red - aggressive
+  'disgust': '#84CC16',    // Lime green - unpleasant
+  'fear': '#8B5CF6',       // Purple - anxious
+  'happy': '#F59E0B',      // Amber - joyful
+  'sad': '#3B82F6',        // Blue - melancholic
+  'surprise': '#EC4899',   // Pink - unexpected
+  'neutral': '#6B7280',    // Gray - calm/balanced
+}
 
-// Get color for emotion based on its position in the order
+// Get color for emotion based on emotion type
 const getEmotionChartColor = (emotion: string): string => {
-  const index = EMOTION_ORDER.indexOf(emotion.toLowerCase())
-  if (index >= 0) {
-    return COLORS[index % COLORS.length]
-  }
-  // Fallback for unknown emotions
-  return COLORS[0]
+  const emotionLower = emotion.toLowerCase()
+  return EMOTION_COLORS[emotionLower] || '#6B7280'  // Default to gray
 }
 
 // Get emoji for emotion (matching verification results and webcam section)
@@ -59,7 +65,7 @@ export function AttendanceHistory({ verifyResult }: AttendanceHistoryProps) {
   const [records, setRecords] = useState<AttendanceRecord[]>([])
   const [stats, setStats] = useState<AttendanceStats | null>(null)
   const [loading, setLoading] = useState(false)
-  const [limit, setLimit] = useState(50)
+  const [limit, setLimit] = useState(10)
   const [page, setPage] = useState(1)
   const [filterUserId, setFilterUserId] = useState("")
   const [filterDateFrom, setFilterDateFrom] = useState("")
@@ -71,18 +77,13 @@ export function AttendanceHistory({ verifyResult }: AttendanceHistoryProps) {
   const loadAttendance = useCallback(async () => {
     setLoading(true)
     try {
-      const params: any = { limit: limit * page }
-      if (filterUserId) params.userId = filterUserId
-      if (filterDateFrom) params.dateFrom = filterDateFrom
-      if (filterDateTo) params.dateTo = filterDateTo
+      // Load ALL records for client-side filtering and pagination
+      const params: any = { limit: 10000 }  // Max limit to get all records
+      // Don't send filters to backend - we filter on client side for better UX
 
       const [recordsData, statsData, metadata] = await Promise.all([
         getAttendance(params),
-        getAttendanceStats({
-          userId: filterUserId || undefined,
-          dateFrom: filterDateFrom || undefined,
-          dateTo: filterDateTo || undefined
-        }),
+        getAttendanceStats({}),  // Get stats for all records
         getUserMetadata()
       ])
       setRecords(recordsData.records)
@@ -98,7 +99,7 @@ export function AttendanceHistory({ verifyResult }: AttendanceHistoryProps) {
     } finally {
       setLoading(false)
     }
-  }, [limit, page, filterUserId, filterDateFrom, filterDateTo, toast])
+  }, [toast])  // Only reload on component mount - all filtering is client-side
 
   useEffect(() => {
     loadAttendance()
@@ -215,8 +216,40 @@ export function AttendanceHistory({ verifyResult }: AttendanceHistoryProps) {
       return a.name.localeCompare(b.name)
     }) : []
 
-  const paginatedRecords = records.slice((page - 1) * limit, page * limit)
-  const totalPages = Math.ceil(records.length / limit)
+  // Client-side filtering for flexible search
+  const filteredRecords = records.filter(record => {
+    // User ID filter - search by any part of user_id or name
+    if (filterUserId) {
+      const searchLower = filterUserId.toLowerCase()
+      const userIdLower = (record.user_id || '').toLowerCase()
+      const nameLower = (record.name || '').toLowerCase()
+      
+      // Match if search term appears anywhere in user_id or name
+      if (!userIdLower.includes(searchLower) && !nameLower.includes(searchLower)) {
+        return false
+      }
+    }
+    
+    // Date filters (already handled by backend, but keep for consistency)
+    if (filterDateFrom) {
+      try {
+        const recordDate = new Date(record.timestamp).toISOString().split('T')[0]
+        if (recordDate < filterDateFrom) return false
+      } catch {}
+    }
+    
+    if (filterDateTo) {
+      try {
+        const recordDate = new Date(record.timestamp).toISOString().split('T')[0]
+        if (recordDate > filterDateTo) return false
+      } catch {}
+    }
+    
+    return true
+  })
+  
+  const paginatedRecords = filteredRecords.slice((page - 1) * limit, page * limit)
+  const totalPages = Math.ceil(filteredRecords.length / limit)
 
   return (
     <div className="space-y-6">
@@ -247,28 +280,23 @@ export function AttendanceHistory({ verifyResult }: AttendanceHistoryProps) {
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Today's Entries</CardTitle>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-medium">Check-ins</CardTitle>
+              <Calendar className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
-                {(() => {
-                  const today = new Date().toISOString().split("T")[0]
-                  return stats.by_date[today] || 0
-                })()}
-              </div>
-              <p className="text-xs text-foreground/70">Check-ins today</p>
+              <div className="text-2xl font-bold">{stats.check_ins || 0}</div>
+              <p className="text-xs text-foreground/70">Total check-ins</p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Check-ins</CardTitle>
+              <CardTitle className="text-sm font-medium">Check-outs</CardTitle>
               <Calendar className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.by_type?.["check-in"] || 0}</div>
-              <p className="text-xs text-foreground/70">Total check-ins</p>
+              <div className="text-2xl font-bold">{stats.check_outs || 0}</div>
+              <p className="text-xs text-foreground/70">Total check-outs</p>
             </CardContent>
           </Card>
         </div>
@@ -409,7 +437,7 @@ export function AttendanceHistory({ verifyResult }: AttendanceHistoryProps) {
                 <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="filter-user"
-                  placeholder="Filter by user..."
+                  placeholder="Search by ID or name... (e.g., '1', 'SWS', 'Nguyen')"
                   value={filterUserId}
                   onChange={(e) => {
                     setFilterUserId(e.target.value)
@@ -464,6 +492,33 @@ export function AttendanceHistory({ verifyResult }: AttendanceHistoryProps) {
             <div className="text-center py-8 text-foreground/70">No attendance records found</div>
           ) : (
             <>
+              {/* Records per page selector */}
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="records-per-page" className="text-sm">Records per page:</Label>
+                  <Select
+                    value={limit.toString()}
+                    onValueChange={(value) => {
+                      setLimit(Number(value))
+                      setPage(1)
+                    }}
+                  >
+                    <SelectTrigger id="records-per-page" className="w-[100px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="10">10</SelectItem>
+                      <SelectItem value="25">25</SelectItem>
+                      <SelectItem value="50">50</SelectItem>
+                      <SelectItem value="100">100</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="text-sm font-medium text-foreground">
+                  Total Records: {filteredRecords.length}{filteredRecords.length !== records.length && ` (filtered from ${records.length})`}
+                </div>
+              </div>
+
               <div className="space-y-2">
                 <div className="overflow-x-auto">
                   <table className="w-full">
@@ -482,15 +537,19 @@ export function AttendanceHistory({ verifyResult }: AttendanceHistoryProps) {
                       {paginatedRecords.map((record, idx) => {
                         const { date, time } = formatTimestamp(record.timestamp)
                         const meta = userMetadata[record.user_id] || {}
+                        // Use name from registry (enriched by backend) or fallback to metadata/user_id
+                        const displayName = record.name || meta.name || record.user_id
                         return (
                           <tr key={idx} className="border-b border-border/50 hover:bg-muted/50 transition-colors">
                             <td className="py-3 px-4 text-sm">
                               <div className="font-medium text-foreground">{date}</div>
                               <div className="text-xs text-foreground/70">{time}</div>
                             </td>
-                            <td className="py-3 px-4 text-sm font-medium text-foreground">{record.user_id}</td>
-                            <td className="py-3 px-4 text-sm text-foreground/80">
-                              {meta.name || "-"}
+                            <td className="py-3 px-4 text-sm">
+                              <div className="font-mono text-xs text-foreground/70">{record.user_id}</div>
+                            </td>
+                            <td className="py-3 px-4 text-sm font-medium text-foreground">
+                              {displayName}
                               {meta.department && (
                                 <div className="text-xs text-foreground/60">{meta.department}</div>
                               )}
@@ -527,35 +586,33 @@ export function AttendanceHistory({ verifyResult }: AttendanceHistoryProps) {
                 </div>
               </div>
 
-              {/* Pagination */}
-              {totalPages > 1 && (
-                <div className="flex items-center justify-between mt-4">
-                  <div className="text-sm text-foreground/70">
-                    Showing {(page - 1) * limit + 1} to {Math.min(page * limit, records.length)} of {records.length} records
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setPage(p => Math.max(1, p - 1))}
-                      disabled={page === 1}
-                    >
-                      Previous
-                    </Button>
-                    <div className="text-sm text-foreground/70">
-                      Page {page} of {totalPages}
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                      disabled={page === totalPages}
-                    >
-                      Next
-                    </Button>
-                  </div>
+              {/* Pagination - Always visible */}
+              <div className="flex items-center justify-between mt-4 pt-4 border-t border-border">
+                <div className="text-sm text-foreground/70">
+                  Showing {filteredRecords.length > 0 ? (page - 1) * limit + 1 : 0} to {Math.min(page * limit, filteredRecords.length)} of {filteredRecords.length} records
                 </div>
-              )}
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPage(p => Math.max(1, p - 1))}
+                    disabled={page === 1 || filteredRecords.length === 0}
+                  >
+                    Previous
+                  </Button>
+                  <div className="text-sm text-foreground/70">
+                    Page {filteredRecords.length > 0 ? page : 0} of {filteredRecords.length > 0 ? totalPages : 0}
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                    disabled={page === totalPages || filteredRecords.length === 0}
+                  >
+                    Next
+                  </Button>
+                </div>
+              </div>
             </>
           )}
         </CardContent>

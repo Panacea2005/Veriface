@@ -2,7 +2,18 @@ import os
 from pathlib import Path
 from typing import Literal
 
+# Load environment variables from backend/.env if present
+try:
+    from dotenv import load_dotenv  # type: ignore
+    _ENV_PATH = Path(__file__).parent.parent / ".env"
+    if _ENV_PATH.exists():
+        load_dotenv(dotenv_path=_ENV_PATH, override=False)
+except Exception:
+    # dotenv is optional; ignore if not installed
+    pass
+
 MODE: Literal["heur", "onnx"] = os.getenv("MODE", "heur")
+SIMILARITY_METRIC: Literal["cosine", "euclidean"] = os.getenv("SIMILARITY_METRIC", "cosine")  # backend-wide default
 
 # Paths
 BASE_DIR = Path(__file__).parent.parent

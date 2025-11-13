@@ -6,8 +6,10 @@ import json
 import csv
 import io
 from app.core.config import STORE_DIR
+from app.pipelines.registry import FaceRegistry
 
 router = APIRouter()
+registry = FaceRegistry()
 
 ATTENDANCE_LOG_PATH = STORE_DIR / "attendance.jsonl"
 USER_METADATA_PATH = STORE_DIR / "user_metadata.json"
@@ -174,8 +176,14 @@ async def get_attendance(
     date_from: Optional[str] = Query(None, description="Filter from date (YYYY-MM-DD)"),
     date_to: Optional[str] = Query(None, description="Filter to date (YYYY-MM-DD)")
 ):
-    """Get attendance records with optional filtering."""
+    """Get attendance records with optional filtering. Enriches with user names from registry."""
+    from app.pipelines.registry import FaceRegistry
+    
     logs = _load_attendance_logs(limit=None)  # Load all first for filtering
+    
+    # Load registry to get user names
+    registry = FaceRegistry()
+    registry_data = registry.get_all()
     
     # Filter by user_id
     if user_id:
@@ -200,9 +208,36 @@ async def get_attendance(
     if limit:
         logs = logs[:limit]
     
+    # Enrich logs with user names from registry
+    enriched_logs = []
+    registry_data = registry.get_all()  # Load registry once
+    
+    for log in logs:
+        log_user_id = log.get("user_id", "")
+        user_name = None
+        
+        # Get name from registry (new format)
+        if log_user_id in registry_data:
+            user_data = registry_data[log_user_id]
+            if isinstance(user_data, dict) and "name" in user_data:
+                user_name = user_data["name"]
+            elif isinstance(user_data, list):
+                # Legacy format - use user_id as name
+                user_name = log_user_id
+        
+        # If no name found, use user_id as fallback
+        if not user_name:
+            user_name = log_user_id
+        
+        enriched_log = {
+            **log,
+            "name": user_name  # Add name field
+        }
+        enriched_logs.append(enriched_log)
+    
     return {
-        "records": logs,
-        "count": len(logs)
+        "records": enriched_logs,
+        "count": len(enriched_logs)
     }
 
 @router.get("/api/attendance/stats")
@@ -263,9 +298,15 @@ async def get_attendance_stats(
     
     # Group by check type
     by_type: Dict[str, int] = {}
+    check_ins = 0
+    check_outs = 0
     for log in logs:
         check_type = log.get("type", "check-in")
         by_type[check_type] = by_type.get(check_type, 0) + 1
+        if check_type == "check-in":
+            check_ins += 1
+        elif check_type == "check-out":
+            check_outs += 1
     
     # Daily trends (last 30 days)
     daily_trends: Dict[str, int] = {}
@@ -276,7 +317,10 @@ async def get_attendance_stats(
     
     return {
         "total_records": total_records,
+        "total_entries": total_records,  # Alias for clarity
         "unique_users": unique_users,
+        "check_ins": check_ins,
+        "check_outs": check_outs,
         "by_date": by_date,
         "by_user": by_user,
         "by_emotion": by_emotion,

@@ -1,264 +1,67 @@
-{"ts": "2025-11-06T07:57:19.510768Z", "label": "surprise", "confidence": 0.2492794692516327, "bbox": {"x": 460, "y": 180, "w": 360, "h": 360}, "liveness": {"score": 0.5821914003741815, "passed": true}}
-{"ts": "2025-11-06T07:57:47.100179Z", "label": "sad", "confidence": 0.3374693989753723, "bbox": {"x": 460, "y": 180, "w": 360, "h": 360}, "liveness": {"score": 0.6776345482106338, "passed": true}}
-{"ts": "2025-11-06T07:57:51.150115Z", "label": "sad", "confidence": 0.33140718936920166, "bbox": {"x": 460, "y": 180, "w": 360, "h": 360}, "liveness": {"score": 0.6856185982484512, "passed": true}}
-{"ts": "2025-11-06T07:57:55.176472Z", "label": "sad", "confidence": 0.3290100693702698, "bbox": {"x": 460, "y": 180, "w": 360, "h": 360}, "liveness": {"score": 0.6836870772025327, "passed": true}}
-{"ts": "2025-11-06T07:57:59.217320Z", "label": "sad", "confidence": 0.3267766237258911, "bbox": {"x": 460, "y": 180, "w": 360, "h": 360}, "liveness": {"score": 0.687121715206787, "passed": true}}
-{"ts": "2025-11-06T07:58:03.266590Z", "label": "sad", "confidence": 0.32391175627708435, "bbox": {"x": 460, "y": 180, "w": 360, "h": 360}, "liveness": {"score": 0.7183524605614913, "passed": true}}
-{"ts": "2025-11-06T07:58:07.310087Z", "label": "sad", "confidence": 0.3384735584259033, "bbox": {"x": 460, "y": 180, "w": 360, "h": 360}, "liveness": {"score": 0.6677799724107439, "passed": true}}
-{"ts": "2025-11-06T07:58:11.385732Z", "label": "sad", "confidence": 0.32570555806159973, "bbox": {"x": 460, "y": 180, "w": 360, "h": 360}, "liveness": {"score": 0.6739085698933777, "passed": true}}
-{"ts": "2025-11-06T07:58:15.653967Z", "label": "sad", "confidence": 0.32041817903518677, "bbox": {"x": 460, "y": 180, "w": 360, "h": 360}, "liveness": {"score": 0.666276736280058, "passed": true}}
-{"ts": "2025-11-06T07:58:19.771199Z", "label": "sad", "confidence": 0.3260916471481323, "bbox": {"x": 460, "y": 180, "w": 360, "h": 360}, "liveness": {"score": 0.6631936830298313, "passed": true}}
-{"ts": "2025-11-06T07:58:23.931196Z", "label": "sad", "confidence": 0.3419657349586487, "bbox": {"x": 460, "y": 180, "w": 360, "h": 360}, "liveness": {"score": 0.6508606260990468, "passed": true}}
-{"ts": "2025-11-06T07:58:28.180167Z", "label": "sad", "confidence": 0.31548622250556946, "bbox": {"x": 460, "y": 180, "w": 360, "h": 360}, "liveness": {"score": 0.7390177969393218, "passed": true}}
-{"ts": "2025-11-06T08:02:28.875643Z", "label": "neutral", "confidence": 0.65, "bbox": {"x": 460, "y": 180, "w": 360, "h": 360}, "liveness": {"score": 0.7658282844387755, "passed": true}}
-{"ts": "2025-11-06T08:02:32.096158Z", "label": "neutral", "confidence": 0.65, "bbox": {"x": 460, "y": 180, "w": 360, "h": 360}, "liveness": {"score": 0.761702806122449, "passed": true}}
-{"ts": "2025-11-06T08:02:35.329315Z", "label": "neutral", "confidence": 0.65, "bbox": {"x": 460, "y": 180, "w": 360, "h": 360}, "liveness": {"score": 0.7637356505102041, "passed": true}}
-{"ts": "2025-11-06T08:02:38.581482Z", "label": "neutral", "confidence": 0.65, "bbox": {"x": 460, "y": 180, "w": 360, "h": 360}, "liveness": {"score": 0.7647520727040816, "passed": true}}
-{"ts": "2025-11-06T08:02:41.831080Z", "label": "neutral", "confidence": 0.65, "bbox": {"x": 460, "y": 180, "w": 360, "h": 360}, "liveness": {"score": 0.7669044961734693, "passed": true}}
-{"ts": "2025-11-06T08:02:45.059640Z", "label": "neutral", "confidence": 0.65, "bbox": {"x": 460, "y": 180, "w": 360, "h": 360}, "liveness": {"score": 0.7630460778061224, "passed": true}}
-{"ts": "2025-11-06T08:02:48.909152Z", "label": "neutral", "confidence": 0.65, "bbox": {"x": 460, "y": 180, "w": 360, "h": 360}, "liveness": {"score": 0.7100867049371054, "passed": true}}
-{"ts": "2025-11-06T08:11:51.571601Z", "label": "neutral", "confidence": 0.65, "bbox": {"x": 460, "y": 180, "w": 360, "h": 360}, "liveness": {"score": 0.2163185016000133, "passed": false}}
-{"ts": "2025-11-06T08:11:55.035001Z", "label": "neutral", "confidence": 0.65, "bbox": {"x": 460, "y": 180, "w": 360, "h": 360}, "liveness": {"score": 0.21850039263107485, "passed": false}}
-{"ts": "2025-11-06T08:13:22.877759Z", "label": "neutral", "confidence": 0.65, "bbox": {"x": 460, "y": 180, "w": 360, "h": 360}, "liveness": {"score": 0.21902396434338853, "passed": false}}
-{"ts": "2025-11-06T08:13:26.344624Z", "label": "neutral", "confidence": 0.65, "bbox": {"x": 460, "y": 180, "w": 360, "h": 360}, "liveness": {"score": 0.2206473653436731, "passed": false}}
-{"ts": "2025-11-06T08:13:29.802860Z", "label": "neutral", "confidence": 0.65, "bbox": {"x": 460, "y": 180, "w": 360, "h": 360}, "liveness": {"score": 0.2192583916844773, "passed": false}}
-{"ts": "2025-11-06T08:13:33.269869Z", "label": "neutral", "confidence": 0.65, "bbox": {"x": 460, "y": 180, "w": 360, "h": 360}, "liveness": {"score": 0.21778287228096582, "passed": false}}
-{"ts": "2025-11-06T08:13:36.816780Z", "label": "neutral", "confidence": 0.65, "bbox": {"x": 460, "y": 180, "w": 360, "h": 360}, "liveness": {"score": 0.22168660796798018, "passed": false}}
-{"ts": "2025-11-06T08:13:40.540596Z", "label": "neutral", "confidence": 0.65, "bbox": {"x": 460, "y": 180, "w": 360, "h": 360}, "liveness": {"score": 0.22258312314616915, "passed": false}}
-{"ts": "2025-11-06T13:35:09.546975Z", "label": "neutral", "confidence": 0.65, "bbox": {"x": 460, "y": 180, "w": 360, "h": 360}, "liveness": {"score": 0.22293644151183648, "passed": false}}
-{"ts": "2025-11-06T13:35:20.421197Z", "label": "neutral", "confidence": 0.65, "bbox": {"x": 512, "y": 278, "w": 268, "h": 268}, "liveness": {"score": 0.22501855478995772, "passed": false}}
-{"ts": "2025-11-06T13:35:23.876354Z", "label": "neutral", "confidence": 0.65, "bbox": {"x": 518, "y": 304, "w": 251, "h": 251}, "liveness": {"score": 0.2036929314914985, "passed": false}}
-{"ts": "2025-11-06T13:35:27.333906Z", "label": "neutral", "confidence": 0.65, "bbox": {"x": 491, "y": 281, "w": 268, "h": 268}, "liveness": {"score": 0.22765411776009595, "passed": false}}
-{"ts": "2025-11-06T13:35:30.836826Z", "label": "neutral", "confidence": 0.65, "bbox": {"x": 502, "y": 274, "w": 275, "h": 275}, "liveness": {"score": 0.22540365883382635, "passed": false}}
-{"ts": "2025-11-06T13:35:34.312947Z", "label": "neutral", "confidence": 0.65, "bbox": {"x": 513, "y": 279, "w": 272, "h": 272}, "liveness": {"score": 0.22646392850086727, "passed": false}}
-{"ts": "2025-11-06T13:51:33.870750Z", "label": "neutral", "confidence": 0.65, "bbox": {"x": 486, "y": 384, "w": 295, "h": 295}, "liveness": {"score": 0.9, "passed": true}}
-{"ts": "2025-11-06T13:51:37.078059Z", "label": "neutral", "confidence": 0.65, "bbox": {"x": 474, "y": 390, "w": 271, "h": 271}, "liveness": {"score": 0.9, "passed": true}}
-{"ts": "2025-11-06T13:51:40.285128Z", "label": "neutral", "confidence": 0.65, "bbox": {"x": 471, "y": 386, "w": 282, "h": 282}, "liveness": {"score": 0.9, "passed": true}}
-{"ts": "2025-11-06T13:51:43.513820Z", "label": "neutral", "confidence": 0.65, "bbox": {"x": 468, "y": 382, "w": 292, "h": 292}, "liveness": {"score": 0.9, "passed": true}}
-{"ts": "2025-11-06T13:51:46.727016Z", "label": "neutral", "confidence": 0.65, "bbox": {"x": 475, "y": 390, "w": 279, "h": 279}, "liveness": {"score": 0.9, "passed": true}}
-{"ts": "2025-11-06T13:51:49.967925Z", "label": "neutral", "confidence": 0.65, "bbox": {"x": 472, "y": 386, "w": 286, "h": 286}, "liveness": {"score": 0.9, "passed": true}}
-{"ts": "2025-11-06T13:51:53.204061Z", "label": "neutral", "confidence": 0.65, "bbox": {"x": 470, "y": 386, "w": 286, "h": 286}, "liveness": {"score": 0.9, "passed": true}}
-{"ts": "2025-11-06T14:01:26.319242Z", "label": "neutral", "confidence": 0.65, "bbox": {"x": 467, "y": 374, "w": 294, "h": 294}, "liveness": {"score": 0.9, "passed": true}}
-{"ts": "2025-11-06T14:01:29.555587Z", "label": "neutral", "confidence": 0.65, "bbox": {"x": 472, "y": 377, "w": 292, "h": 292}, "liveness": {"score": 0.9, "passed": true}}
-{"ts": "2025-11-06T14:01:32.823483Z", "label": "neutral", "confidence": 0.65, "bbox": {"x": 482, "y": 427, "w": 270, "h": 270}, "liveness": {"score": 0.9, "passed": true}}
-{"ts": "2025-11-06T14:01:36.092972Z", "label": "neutral", "confidence": 0.65, "bbox": {"x": 487, "y": 430, "w": 268, "h": 268}, "liveness": {"score": 0.9, "passed": true}}
-{"ts": "2025-11-06T14:01:39.371651Z", "label": "neutral", "confidence": 0.65, "bbox": {"x": 484, "y": 428, "w": 274, "h": 274}, "liveness": {"score": 0.9, "passed": true}}
-{"ts": "2025-11-06T14:01:42.675545Z", "label": "neutral", "confidence": 0.65, "bbox": {"x": 445, "y": 257, "w": 312, "h": 312}, "liveness": {"score": 0.9, "passed": true}}
-{"ts": "2025-11-06T14:01:45.995490Z", "label": "neutral", "confidence": 0.65, "bbox": {"x": 458, "y": 220, "w": 313, "h": 313}, "liveness": {"score": 0.9, "passed": true}}
-{"ts": "2025-11-06T14:05:34.895728Z", "label": "neutral", "confidence": 0.65, "bbox": {"x": 506, "y": 385, "w": 299, "h": 299}, "liveness": {"score": 0.9, "passed": true}}
-{"ts": "2025-11-06T14:05:38.127071Z", "label": "neutral", "confidence": 0.65, "bbox": {"x": 506, "y": 392, "w": 294, "h": 294}, "liveness": {"score": 0.9, "passed": true}}
-{"ts": "2025-11-06T14:05:41.389213Z", "label": "neutral", "confidence": 0.65, "bbox": {"x": 507, "y": 397, "w": 294, "h": 294}, "liveness": {"score": 0.9, "passed": true}}
-{"ts": "2025-11-06T14:41:47.439085Z", "label": "angry", "confidence": 0.36593523314835774, "bbox": {"x": 477, "y": 380, "w": 298, "h": 298}, "liveness": {"score": 0.22569811913969054, "passed": false}}
-{"ts": "2025-11-06T14:41:51.001344Z", "label": "sad", "confidence": 0.38885090849693016, "bbox": {"x": 476, "y": 391, "w": 300, "h": 300}, "liveness": {"score": 0.22592609424785665, "passed": false}}
-{"ts": "2025-11-06T14:41:54.539543Z", "label": "angry", "confidence": 0.7729785650567265, "bbox": {"x": 475, "y": 389, "w": 307, "h": 307}, "liveness": {"score": 0.2261825292844962, "passed": false}}
-{"ts": "2025-11-06T14:41:58.045707Z", "label": "happy", "confidence": 0.9985761474847933, "bbox": {"x": 457, "y": 384, "w": 280, "h": 280}, "liveness": {"score": 0.22657313559889278, "passed": false}}
-{"ts": "2025-11-06T14:42:01.592607Z", "label": "sad", "confidence": 0.6292330641183922, "bbox": {"x": 0, "y": 205, "w": 354, "h": 354}, "liveness": {"score": 0.215813810848972, "passed": false}}
-{"ts": "2025-11-06T14:46:04.616748Z", "label": "angry", "confidence": 0.39300842856287, "bbox": {"x": 894, "y": 35, "w": 246, "h": 246}, "liveness": {"score": 0.21730977101545285, "passed": false}}
-{"ts": "2025-11-06T14:46:08.192769Z", "label": "neutral", "confidence": 0.4899804729656019, "bbox": {"x": 931, "y": 43, "w": 229, "h": 229}, "liveness": {"score": 0.21506424006156022, "passed": false}}
-{"ts": "2025-11-06T14:46:11.720918Z", "label": "neutral", "confidence": 0.6146966602461287, "bbox": {"x": 1084, "y": 51, "w": 195, "h": 221}, "liveness": {"score": 0.1975699880076292, "passed": false}}
-{"ts": "2025-11-06T14:46:15.288578Z", "label": "surprise", "confidence": 0.5786957784521604, "bbox": {"x": 434, "y": 324, "w": 256, "h": 256}, "liveness": {"score": 0.21700646319289973, "passed": false}}
-{"ts": "2025-11-06T14:46:18.859687Z", "label": "angry", "confidence": 0.78114299269435, "bbox": {"x": 437, "y": 330, "w": 302, "h": 302}, "liveness": {"score": 0.2272035956109276, "passed": false}}
-{"ts": "2025-11-06T14:52:44.825696Z", "label": "neutral", "confidence": 0.47036615300613677, "bbox": {"x": 0, "y": 59, "w": 366, "h": 366}, "liveness": {"score": 0.6482492258968897, "passed": true}}
-{"ts": "2025-11-06T14:56:47.043967Z", "label": "angry", "confidence": 0.4140090981570575, "bbox": {"x": 525, "y": 312, "w": 248, "h": 248}, "liveness": {"score": 0.6551951352585427, "passed": true}}
-{"ts": "2025-11-06T14:56:50.377130Z", "label": "neutral", "confidence": 0.5438897111513273, "bbox": {"x": 527, "y": 312, "w": 245, "h": 245}, "liveness": {"score": 0.6496699772855302, "passed": true}}
-{"ts": "2025-11-06T14:56:53.717980Z", "label": "angry", "confidence": 0.40691424562625883, "bbox": {"x": 528, "y": 312, "w": 247, "h": 247}, "liveness": {"score": 0.6561841024771049, "passed": true}}
-{"ts": "2025-11-06T14:56:57.074217Z", "label": "sad", "confidence": 0.4034826640276268, "bbox": {"x": 528, "y": 313, "w": 245, "h": 245}, "liveness": {"score": 0.6521295736180158, "passed": true}}
-{"ts": "2025-11-06T14:57:00.638420Z", "label": "sad", "confidence": 0.4033054347874845, "bbox": {"x": 529, "y": 311, "w": 246, "h": 246}, "liveness": {"score": 0.6545783716970105, "passed": true}}
-{"ts": "2025-11-06T14:57:03.986086Z", "label": "neutral", "confidence": 0.6053528290517328, "bbox": {"x": 527, "y": 312, "w": 247, "h": 247}, "liveness": {"score": 0.658952867074517, "passed": true}}
-{"ts": "2025-11-06T14:57:07.338514Z", "label": "angry", "confidence": 0.4718012954686765, "bbox": {"x": 527, "y": 313, "w": 246, "h": 246}, "liveness": {"score": 0.6554925582458171, "passed": true}}
-{"ts": "2025-11-06T14:57:10.716108Z", "label": "neutral", "confidence": 0.6606229889627317, "bbox": {"x": 527, "y": 313, "w": 246, "h": 246}, "liveness": {"score": 0.656050514329951, "passed": true}}
-{"ts": "2025-11-06T14:57:14.206538Z", "label": "neutral", "confidence": 0.835565009749659, "bbox": {"x": 526, "y": 315, "w": 245, "h": 245}, "liveness": {"score": 0.6471928827497961, "passed": true}}
-{"ts": "2025-11-06T15:01:35.494704Z", "label": "neutral", "confidence": 0.6390240315887761, "bbox": {"x": 0, "y": 58, "w": 381, "h": 381}, "liveness": {"score": 0.6519825807493481, "passed": true}}
-{"ts": "2025-11-06T15:01:38.936679Z", "label": "angry", "confidence": 0.4964932573601473, "bbox": {"x": 506, "y": 309, "w": 287, "h": 287}, "liveness": {"score": 0.6620336049659238, "passed": true}}
-{"ts": "2025-11-06T15:01:42.333508Z", "label": "angry", "confidence": 0.9358207492344439, "bbox": {"x": 507, "y": 312, "w": 285, "h": 285}, "liveness": {"score": 0.6619013901504089, "passed": true}}
-{"ts": "2025-11-06T15:01:46.416025Z", "label": "neutral", "confidence": 0.3931279489907294, "bbox": {"x": 513, "y": 342, "w": 272, "h": 272}, "liveness": {"score": 0.6524314663270427, "passed": true}}
-{"ts": "2025-11-06T15:01:50.387277Z", "label": "sad", "confidence": 0.4300269295331239, "bbox": {"x": 516, "y": 338, "w": 273, "h": 273}, "liveness": {"score": 0.6557701817133924, "passed": true}}
-{"ts": "2025-11-06T15:01:55.239876Z", "label": "neutral", "confidence": 0.7073116784687694, "bbox": {"x": 431, "y": 265, "w": 289, "h": 289}, "liveness": {"score": 0.6553470679768907, "passed": true}}
-{"ts": "2025-11-06T15:02:00.219489Z", "label": "neutral", "confidence": 0.9154893483733002, "bbox": {"x": 0, "y": 0, "w": 1279, "h": 719}, "liveness": {"score": 0.6959011482960836, "passed": true}}
-{"ts": "2025-11-06T15:02:05.203130Z", "label": "sad", "confidence": 0.9267477716129134, "bbox": {"x": 0, "y": 0, "w": 1279, "h": 719}, "liveness": {"score": 0.6972332804725101, "passed": true}}
-{"ts": "2025-11-06T15:02:08.807234Z", "label": "angry", "confidence": 0.8552025045593882, "bbox": {"x": 491, "y": 240, "w": 299, "h": 299}, "liveness": {"score": 0.6601407146163629, "passed": true}}
-{"ts": "2025-11-06T15:02:12.377618Z", "label": "angry", "confidence": 0.7953882513965495, "bbox": {"x": 478, "y": 241, "w": 306, "h": 306}, "liveness": {"score": 0.6631313380484147, "passed": true}}
-{"ts": "2025-11-06T15:02:15.976755Z", "label": "angry", "confidence": 0.6217221625185267, "bbox": {"x": 469, "y": 243, "w": 294, "h": 294}, "liveness": {"score": 0.6604232365004331, "passed": true}}
-{"ts": "2025-11-06T15:02:20.256954Z", "label": "neutral", "confidence": 0.9571524077256256, "bbox": {"x": 465, "y": 254, "w": 289, "h": 289}, "liveness": {"score": 0.657411907075083, "passed": true}}
-{"ts": "2025-11-06T15:02:24.800301Z", "label": "angry", "confidence": 0.7088164510843113, "bbox": {"x": 471, "y": 241, "w": 305, "h": 305}, "liveness": {"score": 0.6601551230292406, "passed": true}}
-{"ts": "2025-11-06T15:02:28.466605Z", "label": "neutral", "confidence": 0.878233466975389, "bbox": {"x": 487, "y": 246, "w": 298, "h": 298}, "liveness": {"score": 0.6604591833721992, "passed": true}}
-{"ts": "2025-11-06T15:02:32.032115Z", "label": "neutral", "confidence": 0.4201262871117553, "bbox": {"x": 465, "y": 248, "w": 293, "h": 293}, "liveness": {"score": 0.6649514917953858, "passed": true}}
-{"ts": "2025-11-06T15:02:35.547114Z", "label": "angry", "confidence": 0.6317721464240509, "bbox": {"x": 472, "y": 247, "w": 294, "h": 294}, "liveness": {"score": 0.6633339721170127, "passed": true}}
-{"ts": "2025-11-06T15:02:39.199315Z", "label": "neutral", "confidence": 0.7413245662321715, "bbox": {"x": 472, "y": 250, "w": 286, "h": 286}, "liveness": {"score": 0.7243881188912032, "passed": true}}
-{"ts": "2025-11-06T15:02:42.710853Z", "label": "angry", "confidence": 0.8213090840056132, "bbox": {"x": 470, "y": 250, "w": 294, "h": 294}, "liveness": {"score": 0.6631070676464345, "passed": true}}
-{"ts": "2025-11-06T15:10:43.890793Z", "label": "angry", "confidence": 0.9366953878332954, "bbox": {"x": 510, "y": 323, "w": 314, "h": 314}, "liveness": {"score": 0.6652405559255795, "passed": true}}
-{"ts": "2025-11-06T15:10:47.357114Z", "label": "angry", "confidence": 0.6327751111382105, "bbox": {"x": 518, "y": 325, "w": 318, "h": 318}, "liveness": {"score": 0.6632785108664567, "passed": true}}
-{"ts": "2025-11-06T15:10:51.036942Z", "label": "angry", "confidence": 0.9374384902895466, "bbox": {"x": 506, "y": 293, "w": 275, "h": 275}, "liveness": {"score": 0.656736321880726, "passed": true}}
-{"ts": "2025-11-06T15:10:54.524921Z", "label": "neutral", "confidence": 0.9435447159229442, "bbox": {"x": 506, "y": 314, "w": 274, "h": 274}, "liveness": {"score": 0.657194819007894, "passed": true}}
-{"ts": "2025-11-06T15:17:34.155471Z", "label": "angry", "confidence": 0.5023298723486628, "bbox": {"x": 518, "y": 319, "w": 284, "h": 284}, "liveness": {"score": 0.6613801324467724, "passed": true}}
-{"ts": "2025-11-07T05:10:57.230040Z", "label": "neutral", "confidence": 0.999967759985275, "bbox": {"x": 0, "y": 0, "w": 1279, "h": 719}, "liveness": {"score": 0.7341064453124999, "passed": true}}
-{"ts": "2025-11-07T05:11:01.821202Z", "label": "neutral", "confidence": 0.9999722998078024, "bbox": {"x": 0, "y": 0, "w": 1279, "h": 719}, "liveness": {"score": 0.7341516113281249, "passed": true}}
-{"ts": "2025-11-07T05:11:06.386640Z", "label": "neutral", "confidence": 0.9999814264487981, "bbox": {"x": 0, "y": 0, "w": 1279, "h": 719}, "liveness": {"score": 0.7341064453124999, "passed": true}}
-{"ts": "2025-11-07T05:36:44.710788Z", "label": "sad", "confidence": 0.9955871579664722, "bbox": {"x": 0, "y": 0, "w": 1279, "h": 719}, "liveness": {"score": 0.6976723288790565, "passed": true}}
-{"ts": "2025-11-07T05:36:49.138708Z", "label": "sad", "confidence": 0.9974941798175152, "bbox": {"x": 0, "y": 0, "w": 1279, "h": 719}, "liveness": {"score": 0.6971979920072827, "passed": true}}
-{"ts": "2025-11-07T05:46:38.144213Z", "label": "fear", "confidence": 0.4474609997012281, "bbox": {"x": 485, "y": 322, "w": 296, "h": 296}, "liveness": {"score": 0.6607836028667449, "passed": true}}
-{"ts": "2025-11-07T05:46:41.868440Z", "label": "sad", "confidence": 0.9560040307985352, "bbox": {"x": 0, "y": 0, "w": 1279, "h": 719}, "liveness": {"score": 0.6950130747349329, "passed": true}}
-{"ts": "2025-11-07T05:46:45.648571Z", "label": "neutral", "confidence": 0.534985569825352, "bbox": {"x": 503, "y": 320, "w": 295, "h": 295}, "liveness": {"score": 0.6601006048543112, "passed": true}}
-{"ts": "2025-11-07T05:46:58.244603Z", "label": "fear", "confidence": 0.340374352727154, "bbox": {"x": 501, "y": 324, "w": 289, "h": 289}, "liveness": {"score": 0.6595335114233833, "passed": true}}
-{"ts": "2025-11-07T05:47:01.981493Z", "label": "sad", "confidence": 0.5185827365799239, "bbox": {"x": 504, "y": 319, "w": 300, "h": 300}, "liveness": {"score": 0.6603439808218818, "passed": true}}
-{"ts": "2025-11-07T05:47:06.510258Z", "label": "neutral", "confidence": 0.9349119197930589, "bbox": {"x": 520, "y": 340, "w": 284, "h": 284}, "liveness": {"score": 0.6552091342435563, "passed": true}}
-{"ts": "2025-11-07T05:47:10.652479Z", "label": "sad", "confidence": 0.9945067687490156, "bbox": {"x": 0, "y": 0, "w": 1279, "h": 719}, "liveness": {"score": 0.6929980936997004, "passed": true}}
-{"ts": "2025-11-07T05:47:15.647185Z", "label": "sad", "confidence": 0.9666855395927009, "bbox": {"x": 0, "y": 0, "w": 1279, "h": 719}, "liveness": {"score": 0.6928934329535892, "passed": true}}
-{"ts": "2025-11-07T05:47:20.529446Z", "label": "neutral", "confidence": 0.7415201466246978, "bbox": {"x": 512, "y": 351, "w": 285, "h": 285}, "liveness": {"score": 0.6570517229806081, "passed": true}}
-{"ts": "2025-11-07T05:47:25.300758Z", "label": "neutral", "confidence": 0.9841103975417371, "bbox": {"x": 525, "y": 336, "w": 295, "h": 295}, "liveness": {"score": 0.6552976083748953, "passed": true}}
-{"ts": "2025-11-07T05:47:29.139575Z", "label": "neutral", "confidence": 0.7490086192256514, "bbox": {"x": 0, "y": 0, "w": 1279, "h": 719}, "liveness": {"score": 0.6933517018505095, "passed": true}}
-{"ts": "2025-11-07T05:47:32.980544Z", "label": "sad", "confidence": 0.5054002656940557, "bbox": {"x": 0, "y": 0, "w": 1279, "h": 719}, "liveness": {"score": 0.695771254132298, "passed": true}}
-{"ts": "2025-11-07T05:47:36.811035Z", "label": "fear", "confidence": 0.9181798406413424, "bbox": {"x": 0, "y": 0, "w": 1279, "h": 719}, "liveness": {"score": 0.6961098072996411, "passed": true}}
-{"ts": "2025-11-07T05:47:41.696865Z", "label": "fear", "confidence": 0.7987139078968267, "bbox": {"x": 0, "y": 0, "w": 1279, "h": 719}, "liveness": {"score": 0.6958092492835453, "passed": true}}
-{"ts": "2025-11-07T05:47:46.565647Z", "label": "sad", "confidence": 0.5769659219490775, "bbox": {"x": 0, "y": 0, "w": 1279, "h": 719}, "liveness": {"score": 0.6936635992686679, "passed": true}}
-{"ts": "2025-11-07T05:47:50.699208Z", "label": "sad", "confidence": 0.8181066013846431, "bbox": {"x": 0, "y": 0, "w": 1279, "h": 719}, "liveness": {"score": 0.6953199022681099, "passed": true}}
-{"ts": "2025-11-07T05:47:55.528075Z", "label": "sad", "confidence": 0.9375821062569842, "bbox": {"x": 0, "y": 0, "w": 1279, "h": 719}, "liveness": {"score": 0.6947102001589638, "passed": true}}
-{"ts": "2025-11-07T05:48:00.903253Z", "label": "sad", "confidence": 0.9043822322117525, "bbox": {"x": 0, "y": 0, "w": 1279, "h": 719}, "liveness": {"score": 0.6944135345731461, "passed": true}}
-{"ts": "2025-11-07T05:48:05.665956Z", "label": "sad", "confidence": 0.8230714256989519, "bbox": {"x": 0, "y": 0, "w": 1279, "h": 719}, "liveness": {"score": 0.6956080899198804, "passed": true}}
-{"ts": "2025-11-07T05:48:09.730038Z", "label": "neutral", "confidence": 0.6715437210715358, "bbox": {"x": 0, "y": 0, "w": 1279, "h": 719}, "liveness": {"score": 0.6948037106349398, "passed": true}}
-{"ts": "2025-11-07T05:48:14.703399Z", "label": "sad", "confidence": 0.5477864181866993, "bbox": {"x": 417, "y": 276, "w": 356, "h": 356}, "liveness": {"score": 0.6629520145076838, "passed": true}}
-{"ts": "2025-11-07T05:48:18.501934Z", "label": "sad", "confidence": 0.7641099104746419, "bbox": {"x": 0, "y": 0, "w": 1279, "h": 719}, "liveness": {"score": 0.6894651087674821, "passed": true}}
-{"ts": "2025-11-07T05:57:07.369916Z", "label": "neutral", "confidence": 0.9963320223142635, "bbox": {"x": 0, "y": 0, "w": 1279, "h": 719}, "liveness": {"score": 0.7156870827316828, "passed": true}}
-{"ts": "2025-11-07T05:57:53.805494Z", "label": "neutral", "confidence": 0.9989408860147738, "bbox": {"x": 0, "y": 0, "w": 1279, "h": 719}, "liveness": {"score": 0.7152117532540456, "passed": true}}
-{"ts": "2025-11-07T05:57:57.888402Z", "label": "neutral", "confidence": 0.9995838999570675, "bbox": {"x": 0, "y": 0, "w": 1279, "h": 719}, "liveness": {"score": 0.7145098251197269, "passed": true}}
-{"ts": "2025-11-07T05:58:01.911790Z", "label": "neutral", "confidence": 0.9989189895954551, "bbox": {"x": 0, "y": 0, "w": 1279, "h": 719}, "liveness": {"score": 0.7147134259859902, "passed": true}}
-{"ts": "2025-11-07T06:13:00.467159Z", "label": "angry", "confidence": 0.42039062140376005, "bbox": {"x": 445, "y": 334, "w": 243, "h": 243}, "liveness": {"score": 0.6587216691931463, "passed": true}}
-{"ts": "2025-11-07T06:13:04.465912Z", "label": "sad", "confidence": 0.5428390793350351, "bbox": {"x": 450, "y": 332, "w": 256, "h": 256}, "liveness": {"score": 0.6565297002417427, "passed": true}}
-{"ts": "2025-11-07T06:17:13.742797Z", "label": "neutral", "confidence": 0.9994941960870161, "bbox": {"x": 0, "y": 0, "w": 1279, "h": 719}, "liveness": {"score": 0.7150685280677249, "passed": true}}
-{"ts": "2025-11-07T06:17:17.678676Z", "label": "neutral", "confidence": 0.9998252258620383, "bbox": {"x": 0, "y": 0, "w": 1279, "h": 719}, "liveness": {"score": 0.7166071328763688, "passed": true}}
-{"ts": "2025-11-07T06:17:21.649799Z", "label": "neutral", "confidence": 0.9998062198281574, "bbox": {"x": 0, "y": 0, "w": 1279, "h": 719}, "liveness": {"score": 0.7172757220008303, "passed": true}}
-{"ts": "2025-11-07T06:17:25.628483Z", "label": "happy", "confidence": 0.7055575274994472, "bbox": {"x": 1032, "y": 511, "w": 78, "h": 78}, "liveness": {"score": 0.6539913015750551, "passed": true}}
-{"ts": "2025-11-07T06:17:29.720192Z", "label": "neutral", "confidence": 0.9999148637933895, "bbox": {"x": 0, "y": 0, "w": 1279, "h": 719}, "liveness": {"score": 0.7167276861418042, "passed": true}}
-{"ts": "2025-11-07T06:25:27.102728Z", "label": "neutral", "confidence": 0.9998653804360432, "bbox": {"x": 0, "y": 0, "w": 1279, "h": 719}, "liveness": {"score": 0.717179255159923, "passed": true}}
-{"ts": "2025-11-07T06:25:31.358975Z", "label": "neutral", "confidence": 0.9998310880651569, "bbox": {"x": 0, "y": 0, "w": 1279, "h": 719}, "liveness": {"score": 0.717616703363255, "passed": true}}
-{"ts": "2025-11-07T06:25:35.516707Z", "label": "neutral", "confidence": 0.9998026095569393, "bbox": {"x": 0, "y": 0, "w": 1279, "h": 719}, "liveness": {"score": 0.7178538131516047, "passed": true}}
-{"ts": "2025-11-07T06:25:39.610073Z", "label": "happy", "confidence": 0.6339614761859672, "bbox": {"x": 460, "y": 297, "w": 265, "h": 265}, "liveness": {"score": 0.6595221591247016, "passed": true}}
-{"ts": "2025-11-07T06:25:43.723766Z", "label": "sad", "confidence": 0.4679727561948377, "bbox": {"x": 458, "y": 303, "w": 279, "h": 279}, "liveness": {"score": 0.6600011488541935, "passed": true}}
-{"ts": "2025-11-07T06:25:47.838867Z", "label": "fear", "confidence": 0.9966746611152476, "bbox": {"x": 477, "y": 395, "w": 113, "h": 113}, "liveness": {"score": 0.6490531175688061, "passed": true}}
-{"ts": "2025-11-07T06:25:51.957185Z", "label": "neutral", "confidence": 0.999034460599597, "bbox": {"x": 0, "y": 0, "w": 1279, "h": 719}, "liveness": {"score": 0.7172662229816981, "passed": true}}
-{"ts": "2025-11-07T06:28:08.589435Z", "label": "neutral", "confidence": 0.9999617114270043, "bbox": {"x": 0, "y": 0, "w": 1279, "h": 719}, "liveness": {"score": 0.7152693770497457, "passed": true}}
-{"ts": "2025-11-07T06:28:14.130012Z", "label": "neutral", "confidence": 0.9999910804031582, "bbox": {"x": 0, "y": 0, "w": 1279, "h": 719}, "liveness": {"score": 0.7161685328851426, "passed": true}}
-{"ts": "2025-11-07T06:31:22.804753Z", "label": "neutral", "confidence": 0.9999648013670874, "bbox": {"x": 0, "y": 0, "w": 1279, "h": 719}, "liveness": {"score": 0.7159839051367622, "passed": true}}
-{"ts": "2025-11-07T06:31:26.411212Z", "label": "neutral", "confidence": 0.9999838401054756, "bbox": {"x": 0, "y": 0, "w": 1279, "h": 719}, "liveness": {"score": 0.7148753404626573, "passed": true}}
-{"ts": "2025-11-07T06:31:30.110995Z", "label": "neutral", "confidence": 0.9999826549889331, "bbox": {"x": 0, "y": 0, "w": 1279, "h": 719}, "liveness": {"score": 0.7150670008704594, "passed": true}}
-{"ts": "2025-11-07T06:32:41.828726Z", "label": "neutral", "confidence": 0.9998290123950079, "bbox": {"x": 0, "y": 0, "w": 1279, "h": 719}, "liveness": {"score": 0.7145332685311453, "passed": true}}
-{"ts": "2025-11-07T06:34:12.528874Z", "label": "neutral", "confidence": 0.7513711629121129, "bbox": {"x": 370, "y": 107, "w": 322, "h": 322}, "liveness": {"score": 0.6948256244250027, "passed": true}}
-{"ts": "2025-11-07T14:57:34.926409Z", "label": "neutral", "confidence": 0.99990128949686, "bbox": {"x": 515, "y": 366, "w": 309, "h": 309}, "liveness": {"score": 0.6610555366361565, "passed": true}}
-{"ts": "2025-11-07T14:58:06.285536Z", "label": "neutral", "confidence": 0.99990128949686, "bbox": {"x": 515, "y": 366, "w": 309, "h": 309}, "liveness": {"score": 0.6610555366361565, "passed": true}}
-{"ts": "2025-11-07T14:58:17.499194Z", "label": "neutral", "confidence": 0.987887567339371, "bbox": {"x": 525, "y": 365, "w": 299, "h": 299}, "liveness": {"score": 0.6627107665391617, "passed": true}}
-{"ts": "2025-11-07T14:58:21.149231Z", "label": "neutral", "confidence": 0.9830450739311659, "bbox": {"x": 521, "y": 362, "w": 308, "h": 308}, "liveness": {"score": 0.6639584494434972, "passed": true}}
-{"ts": "2025-11-07T14:58:24.881827Z", "label": "sad", "confidence": 0.9905236346520226, "bbox": {"x": 0, "y": 123, "w": 394, "h": 394}, "liveness": {"score": 0.6595457539808498, "passed": true}}
-{"ts": "2025-11-07T14:58:28.664156Z", "label": "sad", "confidence": 0.9890664380178823, "bbox": {"x": 0, "y": 129, "w": 383, "h": 383}, "liveness": {"score": 0.7216281593573775, "passed": true}}
-{"ts": "2025-11-07T14:58:32.318297Z", "label": "angry", "confidence": 0.8004503267652439, "bbox": {"x": 514, "y": 381, "w": 338, "h": 338}, "liveness": {"score": 0.6663910991114642, "passed": true}}
-{"ts": "2025-11-07T14:58:36.076442Z", "label": "sad", "confidence": 0.918183543475102, "bbox": {"x": 426, "y": 373, "w": 233, "h": 233}, "liveness": {"score": 0.6565621629202949, "passed": true}}
-{"ts": "2025-11-07T14:58:39.889446Z", "label": "sad", "confidence": 0.9438151895933544, "bbox": {"x": 0, "y": 120, "w": 399, "h": 399}, "liveness": {"score": 0.6692393898479297, "passed": true}}
-{"ts": "2025-11-07T15:11:45.171793Z", "label": "neutral", "confidence": 0.6990522851736004, "bbox": {"x": 471, "y": 396, "w": 272, "h": 272}, "liveness": {"score": 0.6575531062974482, "passed": true}}
-{"ts": "2025-11-07T15:11:48.810593Z", "label": "neutral", "confidence": 0.866274289726629, "bbox": {"x": 491, "y": 394, "w": 266, "h": 266}, "liveness": {"score": 0.6586140015805688, "passed": true}}
-{"ts": "2025-11-07T15:11:52.449423Z", "label": "sad", "confidence": 0.3882202040934446, "bbox": {"x": 495, "y": 394, "w": 262, "h": 262}, "liveness": {"score": 0.6575143180175498, "passed": true}}
-{"ts": "2025-11-07T15:11:56.086263Z", "label": "sad", "confidence": 0.9638399130827632, "bbox": {"x": 471, "y": 394, "w": 265, "h": 265}, "liveness": {"score": 0.6673504017829106, "passed": true}}
-{"ts": "2025-11-07T15:11:59.801836Z", "label": "neutral", "confidence": 0.38574195151197294, "bbox": {"x": 473, "y": 394, "w": 257, "h": 257}, "liveness": {"score": 0.6576786031928424, "passed": true}}
-{"ts": "2025-11-07T15:12:03.441967Z", "label": "angry", "confidence": 0.3923562389833957, "bbox": {"x": 474, "y": 391, "w": 259, "h": 259}, "liveness": {"score": 0.6931949877773681, "passed": true}}
-{"ts": "2025-11-07T15:12:07.067647Z", "label": "neutral", "confidence": 0.9037358335738013, "bbox": {"x": 474, "y": 389, "w": 263, "h": 263}, "liveness": {"score": 0.6565725511610581, "passed": true}}
-{"ts": "2025-11-07T15:12:10.724498Z", "label": "fear", "confidence": 0.9073151339225227, "bbox": {"x": 493, "y": 321, "w": 288, "h": 288}, "liveness": {"score": 0.608998164952574, "passed": true}}
-{"ts": "2025-11-07T15:12:14.386163Z", "label": "sad", "confidence": 0.9868526257267957, "bbox": {"x": 0, "y": 23, "w": 399, "h": 399}, "liveness": {"score": 0.6679133165938282, "passed": true}}
-{"ts": "2025-11-07T15:12:18.077409Z", "label": "sad", "confidence": 0.9774548889754903, "bbox": {"x": 0, "y": 23, "w": 397, "h": 397}, "liveness": {"score": 0.6641689642698683, "passed": true}}
-{"ts": "2025-11-07T15:12:21.866193Z", "label": "neutral", "confidence": 0.9307966886574928, "bbox": {"x": 475, "y": 278, "w": 259, "h": 259}, "liveness": {"score": 0.6614059527453259, "passed": true}}
-{"ts": "2025-11-07T15:12:26.459405Z", "label": "sad", "confidence": 0.9962975340458744, "bbox": {"x": 0, "y": 21, "w": 391, "h": 391}, "liveness": {"score": 0.664992487057931, "passed": true}}
-{"ts": "2025-11-07T15:12:30.562346Z", "label": "neutral", "confidence": 0.9362046645110071, "bbox": {"x": 467, "y": 289, "w": 258, "h": 258}, "liveness": {"score": 0.7066144583486151, "passed": true}}
-{"ts": "2025-11-07T15:12:34.624645Z", "label": "neutral", "confidence": 0.5923163712727696, "bbox": {"x": 463, "y": 278, "w": 273, "h": 273}, "liveness": {"score": 0.6624524921233584, "passed": true}}
-{"ts": "2025-11-07T15:12:38.503261Z", "label": "sad", "confidence": 0.9854201628526802, "bbox": {"x": 0, "y": 17, "w": 404, "h": 404}, "liveness": {"score": 0.6631155316613755, "passed": true}}
-{"ts": "2025-11-07T15:12:42.691048Z", "label": "sad", "confidence": 0.9455505358124812, "bbox": {"x": 0, "y": 21, "w": 402, "h": 402}, "liveness": {"score": 0.6687228655999806, "passed": true}}
-{"ts": "2025-11-07T15:12:47.148908Z", "label": "sad", "confidence": 0.6272283874221994, "bbox": {"x": 0, "y": 25, "w": 394, "h": 394}, "liveness": {"score": 0.6584635237483597, "passed": true}}
-{"ts": "2025-11-07T15:12:50.950075Z", "label": "sad", "confidence": 0.9944967893555096, "bbox": {"x": 0, "y": 25, "w": 390, "h": 390}, "liveness": {"score": 0.7206605521687645, "passed": true}}
-{"ts": "2025-11-07T15:23:15.986579Z", "label": "neutral", "confidence": 0.9006528778976682, "bbox": {"x": 502, "y": 379, "w": 285, "h": 285}, "liveness": {"score": 0.6532941216599881, "passed": true}}
-{"ts": "2025-11-07T15:23:19.588586Z", "label": "sad", "confidence": 0.9230052499920183, "bbox": {"x": 497, "y": 380, "w": 286, "h": 286}, "liveness": {"score": 0.7161212866837399, "passed": true}}
-{"ts": "2025-11-07T15:23:23.259551Z", "label": "neutral", "confidence": 0.9686209998842213, "bbox": {"x": 493, "y": 381, "w": 284, "h": 284}, "liveness": {"score": 0.6723779695856331, "passed": true}}
-{"ts": "2025-11-07T15:23:27.034790Z", "label": "neutral", "confidence": 0.7375616439809198, "bbox": {"x": 0, "y": 167, "w": 364, "h": 364}, "liveness": {"score": 0.6604871049497905, "passed": true}}
-{"ts": "2025-11-07T15:24:51.314703Z", "label": "neutral", "confidence": 0.7249254040482382, "bbox": {"x": 523, "y": 390, "w": 305, "h": 305}, "liveness": {"score": 0.6604724086063372, "passed": true}}
-{"ts": "2025-11-07T15:24:55.161447Z", "label": "sad", "confidence": 0.9128668417560847, "bbox": {"x": 0, "y": 168, "w": 364, "h": 364}, "liveness": {"score": 0.7219675843518847, "passed": true}}
-{"ts": "2025-11-07T15:24:59.761653Z", "label": "neutral", "confidence": 0.8882891510155922, "bbox": {"x": 450, "y": 402, "w": 273, "h": 273}, "liveness": {"score": 0.6455495996182257, "passed": true}}
-{"ts": "2025-11-07T15:25:03.501177Z", "label": "angry", "confidence": 0.39187500157434785, "bbox": {"x": 468, "y": 385, "w": 287, "h": 287}, "liveness": {"score": 0.6595304086810123, "passed": true}}
-{"ts": "2025-11-07T15:25:07.277269Z", "label": "fear", "confidence": 0.4065072487357806, "bbox": {"x": 538, "y": 356, "w": 284, "h": 284}, "liveness": {"score": 0.718297737919132, "passed": true}}
-{"ts": "2025-11-07T15:25:11.097312Z", "label": "neutral", "confidence": 0.888214703882086, "bbox": {"x": 545, "y": 367, "w": 268, "h": 268}, "liveness": {"score": 0.6532465805695237, "passed": true}}
-{"ts": "2025-11-07T15:25:14.787298Z", "label": "neutral", "confidence": 0.72495696737826, "bbox": {"x": 0, "y": 0, "w": 1279, "h": 719}, "liveness": {"score": 0.6869505535289219, "passed": true}}
-{"ts": "2025-11-07T15:25:18.646892Z", "label": "fear", "confidence": 0.30730634149143515, "bbox": {"x": 439, "y": 366, "w": 277, "h": 277}, "liveness": {"score": 0.7238914036212144, "passed": true}}
-{"ts": "2025-11-07T15:31:20.672634Z", "label": "fear", "confidence": 0.36575738681342146, "bbox": {"x": 515, "y": 395, "w": 302, "h": 302}, "liveness": {"score": 0.67746891341928, "passed": true}}
-{"ts": "2025-11-07T15:31:24.316797Z", "label": "angry", "confidence": 0.6548719242432526, "bbox": {"x": 442, "y": 382, "w": 265, "h": 265}, "liveness": {"score": 0.6569783454987915, "passed": true}}
-{"ts": "2025-11-07T15:31:27.985972Z", "label": "sad", "confidence": 0.3890602543546024, "bbox": {"x": 488, "y": 384, "w": 277, "h": 277}, "liveness": {"score": 0.6547971873074632, "passed": true}}
-{"ts": "2025-11-07T15:31:31.618348Z", "label": "fear", "confidence": 0.6723004022497405, "bbox": {"x": 0, "y": 0, "w": 1279, "h": 719}, "liveness": {"score": 0.6816432009445189, "passed": true}}
-{"ts": "2025-11-07T15:40:22.095570Z", "label": "neutral", "confidence": 0.7937698035688348, "bbox": {"x": 506, "y": 285, "w": 272, "h": 272}, "liveness": {"score": 0.6642591607339444, "passed": true}}
-{"ts": "2025-11-07T15:40:25.818487Z", "label": "neutral", "confidence": 0.4502389621298991, "bbox": {"x": 509, "y": 287, "w": 270, "h": 270}, "liveness": {"score": 0.6585806691760209, "passed": true}}
-{"ts": "2025-11-07T15:40:29.530031Z", "label": "neutral", "confidence": 0.9700953749489978, "bbox": {"x": 510, "y": 288, "w": 269, "h": 269}, "liveness": {"score": 0.6629713750079368, "passed": true}}
-{"ts": "2025-11-07T15:40:33.154910Z", "label": "neutral", "confidence": 0.5810312709295838, "bbox": {"x": 509, "y": 286, "w": 267, "h": 267}, "liveness": {"score": 0.6618554227551332, "passed": true}}
-{"ts": "2025-11-07T15:40:36.844112Z", "label": "neutral", "confidence": 0.45289004849072634, "bbox": {"x": 511, "y": 286, "w": 268, "h": 268}, "liveness": {"score": 0.6616006640351111, "passed": true}}
-{"ts": "2025-11-07T15:40:40.587850Z", "label": "neutral", "confidence": 0.44178170597445854, "bbox": {"x": 510, "y": 286, "w": 273, "h": 273}, "liveness": {"score": 0.6616073638437614, "passed": true}}
-{"ts": "2025-11-07T15:40:44.217106Z", "label": "neutral", "confidence": 0.8546824864093392, "bbox": {"x": 513, "y": 298, "w": 260, "h": 260}, "liveness": {"score": 0.6475788705447131, "passed": true}}
-{"ts": "2025-11-07T15:40:47.912588Z", "label": "neutral", "confidence": 0.8402305263657922, "bbox": {"x": 502, "y": 274, "w": 238, "h": 238}, "liveness": {"score": 0.6513602593644953, "passed": true}}
-{"ts": "2025-11-07T15:40:51.576702Z", "label": "neutral", "confidence": 0.8002473041274394, "bbox": {"x": 536, "y": 284, "w": 241, "h": 241}, "liveness": {"score": 0.6568141314300269, "passed": true}}
-{"ts": "2025-11-07T15:40:55.289213Z", "label": "sad", "confidence": 0.7145709628349014, "bbox": {"x": 0, "y": 0, "w": 1279, "h": 719}, "liveness": {"score": 0.6974481808149064, "passed": true}}
-{"ts": "2025-11-07T15:40:59.021438Z", "label": "angry", "confidence": 0.42658895493751825, "bbox": {"x": 443, "y": 249, "w": 303, "h": 303}, "liveness": {"score": 0.6635995714465699, "passed": true}}
-{"ts": "2025-11-07T15:41:02.697302Z", "label": "angry", "confidence": 0.8770729924495968, "bbox": {"x": 449, "y": 248, "w": 309, "h": 309}, "liveness": {"score": 0.6625906712001917, "passed": true}}
-{"ts": "2025-11-07T15:41:06.387822Z", "label": "angry", "confidence": 0.5120912154368005, "bbox": {"x": 453, "y": 252, "w": 303, "h": 303}, "liveness": {"score": 0.6626008324656576, "passed": true}}
-{"ts": "2025-11-07T15:41:10.179446Z", "label": "angry", "confidence": 0.5916600420242413, "bbox": {"x": 453, "y": 258, "w": 294, "h": 294}, "liveness": {"score": 0.6626192917688734, "passed": true}}
-{"ts": "2025-11-07T15:41:13.802071Z", "label": "angry", "confidence": 0.5770536086952804, "bbox": {"x": 455, "y": 258, "w": 290, "h": 290}, "liveness": {"score": 0.6597515708442327, "passed": true}}
-{"ts": "2025-11-07T15:41:17.567027Z", "label": "angry", "confidence": 0.8327844238344343, "bbox": {"x": 465, "y": 273, "w": 262, "h": 262}, "liveness": {"score": 0.6595346714074073, "passed": true}}
-{"ts": "2025-11-07T15:41:21.393146Z", "label": "neutral", "confidence": 0.7124937453831248, "bbox": {"x": 465, "y": 271, "w": 266, "h": 266}, "liveness": {"score": 0.659686947387248, "passed": true}}
-{"ts": "2025-11-07T15:42:08.320629Z", "label": "angry", "confidence": 0.6055559543366553, "bbox": {"x": 464, "y": 264, "w": 279, "h": 279}, "liveness": {"score": 0.6605221646315342, "passed": true}}
-{"ts": "2025-11-07T15:42:21.559658Z", "label": "angry", "confidence": 0.5333564824640669, "bbox": {"x": 486, "y": 268, "w": 269, "h": 269}, "liveness": {"score": 0.657049718944348, "passed": true}}
-{"ts": "2025-11-07T15:42:25.132781Z", "label": "neutral", "confidence": 0.9647191054768843, "bbox": {"x": 493, "y": 279, "w": 240, "h": 240}, "liveness": {"score": 0.6602850861359525, "passed": true}}
-{"ts": "2025-11-07T15:42:28.769542Z", "label": "fear", "confidence": 0.5003028796209916, "bbox": {"x": 0, "y": 0, "w": 1279, "h": 719}, "liveness": {"score": 0.7007239052514757, "passed": true}}
-{"ts": "2025-11-07T15:42:32.380125Z", "label": "angry", "confidence": 0.6132299601835983, "bbox": {"x": 470, "y": 203, "w": 349, "h": 349}, "liveness": {"score": 0.6925699854279549, "passed": true}}
-{"ts": "2025-11-07T15:42:36.049070Z", "label": "angry", "confidence": 0.47660813008818664, "bbox": {"x": 496, "y": 196, "w": 313, "h": 313}, "liveness": {"score": 0.6598780074524766, "passed": true}}
-{"ts": "2025-11-07T15:42:39.668572Z", "label": "angry", "confidence": 0.5110607049446386, "bbox": {"x": 498, "y": 198, "w": 312, "h": 312}, "liveness": {"score": 0.6601082247954052, "passed": true}}
-{"ts": "2025-11-07T15:42:43.323985Z", "label": "neutral", "confidence": 0.9947599216960837, "bbox": {"x": 458, "y": 242, "w": 270, "h": 270}, "liveness": {"score": 0.6603303213761045, "passed": true}}
-{"ts": "2025-11-07T15:42:46.988576Z", "label": "neutral", "confidence": 0.9802671281782102, "bbox": {"x": 477, "y": 270, "w": 252, "h": 252}, "liveness": {"score": 0.6553267158186786, "passed": true}}
-{"ts": "2025-11-07T15:42:50.740780Z", "label": "neutral", "confidence": 0.9901458263410677, "bbox": {"x": 465, "y": 281, "w": 284, "h": 284}, "liveness": {"score": 0.6494287495511307, "passed": true}}
-{"ts": "2025-11-07T15:42:54.425886Z", "label": "fear", "confidence": 0.9341372303777281, "bbox": {"x": 477, "y": 321, "w": 262, "h": 262}, "liveness": {"score": 0.6210382432043506, "passed": true}}
-{"ts": "2025-11-07T15:42:58.022687Z", "label": "neutral", "confidence": 0.9037785870861865, "bbox": {"x": 472, "y": 269, "w": 258, "h": 258}, "liveness": {"score": 0.6596177532647407, "passed": true}}
-{"ts": "2025-11-07T15:43:01.698487Z", "label": "angry", "confidence": 0.568772271798555, "bbox": {"x": 467, "y": 266, "w": 267, "h": 267}, "liveness": {"score": 0.660204907756426, "passed": true}}
-{"ts": "2025-11-07T15:43:05.795470Z", "label": "neutral", "confidence": 0.9908530845003926, "bbox": {"x": 468, "y": 279, "w": 261, "h": 261}, "liveness": {"score": 0.6529965844454884, "passed": true}}
-{"ts": "2025-11-07T15:51:28.282938Z", "label": "sad", "confidence": 0.4878505470569765, "bbox": {"x": 1418, "y": 1292, "w": 1012, "h": 1012}, "liveness": {"score": 0.6785915179141471, "passed": true}}
-{"ts": "2025-11-07T15:55:14.023245Z", "label": "angry", "confidence": 0.5897020113953579, "bbox": {"x": 484, "y": 290, "w": 253, "h": 253}, "liveness": {"score": 0.6583886519490049, "passed": true}}
-{"ts": "2025-11-07T15:55:25.909818Z", "label": "neutral", "confidence": 0.9995395209723018, "bbox": {"x": 497, "y": 275, "w": 252, "h": 252}, "liveness": {"score": 0.6611952916618808, "passed": true}}
-{"ts": "2025-11-07T15:55:41.533138Z", "label": "neutral", "confidence": 0.9671736275587073, "bbox": {"x": 469, "y": 286, "w": 249, "h": 249}, "liveness": {"score": 0.6583122301398501, "passed": true}}
-{"ts": "2025-11-07T15:55:45.229591Z", "label": "neutral", "confidence": 0.9175875268264848, "bbox": {"x": 479, "y": 274, "w": 251, "h": 251}, "liveness": {"score": 0.6577094387368497, "passed": true}}
-{"ts": "2025-11-07T15:55:48.894969Z", "label": "neutral", "confidence": 0.5275693142672412, "bbox": {"x": 478, "y": 282, "w": 252, "h": 252}, "liveness": {"score": 0.6565160044997047, "passed": true}}
-{"ts": "2025-11-07T15:55:52.718419Z", "label": "neutral", "confidence": 0.4031419146510871, "bbox": {"x": 471, "y": 279, "w": 262, "h": 262}, "liveness": {"score": 0.65723759497968, "passed": true}}
-{"ts": "2025-11-07T15:55:56.386245Z", "label": "neutral", "confidence": 0.9413693367195958, "bbox": {"x": 480, "y": 280, "w": 254, "h": 254}, "liveness": {"score": 0.6570112888826256, "passed": true}}
-{"ts": "2025-11-07T15:56:21.296972Z", "label": "neutral", "confidence": 0.8766568728495414, "bbox": {"x": 472, "y": 278, "w": 256, "h": 256}, "liveness": {"score": 0.6597681841736773, "passed": true}}
-{"ts": "2025-11-07T15:56:24.919932Z", "label": "neutral", "confidence": 0.5216061082254478, "bbox": {"x": 462, "y": 247, "w": 269, "h": 269}, "liveness": {"score": 0.6589837485391236, "passed": true}}
-{"ts": "2025-11-07T15:56:28.584862Z", "label": "sad", "confidence": 0.9996946318384821, "bbox": {"x": 0, "y": 0, "w": 1279, "h": 719}, "liveness": {"score": 0.7020055866779871, "passed": true}}
-{"ts": "2025-11-07T15:56:32.291766Z", "label": "angry", "confidence": 0.6110170655261201, "bbox": {"x": 487, "y": 230, "w": 326, "h": 326}, "liveness": {"score": 0.6641170778775093, "passed": true}}
-{"ts": "2025-11-07T15:56:35.976756Z", "label": "neutral", "confidence": 0.9645477035568972, "bbox": {"x": 502, "y": 231, "w": 320, "h": 320}, "liveness": {"score": 0.6614746271765851, "passed": true}}
-{"ts": "2025-11-07T15:58:21.094273Z", "label": "neutral", "confidence": 0.6804418580290865, "bbox": {"x": 481, "y": 288, "w": 255, "h": 255}, "liveness": {"score": 0.6574225322209626, "passed": true}}
-{"ts": "2025-11-07T15:58:29.532139Z", "label": "neutral", "confidence": 0.8025532558459347, "bbox": {"x": 475, "y": 219, "w": 313, "h": 313}, "liveness": {"score": 0.6605243387589954, "passed": true}}
-{"ts": "2025-11-07T15:58:33.270502Z", "label": "neutral", "confidence": 0.5328688104967847, "bbox": {"x": 400, "y": 201, "w": 372, "h": 372}, "liveness": {"score": 0.6698650076696295, "passed": true}}
-{"ts": "2025-11-07T15:58:37.137937Z", "label": "neutral", "confidence": 0.4588591123150445, "bbox": {"x": 431, "y": 208, "w": 348, "h": 348}, "liveness": {"score": 0.6659527717969053, "passed": true}}
-{"ts": "2025-11-07T15:58:40.796564Z", "label": "sad", "confidence": 0.8942630732423819, "bbox": {"x": 0, "y": 0, "w": 1279, "h": 719}, "liveness": {"score": 0.700242624223818, "passed": true}}
-{"ts": "2025-11-07T15:59:25.182340Z", "label": "angry", "confidence": 0.51408934726257, "bbox": {"x": 515, "y": 286, "w": 263, "h": 263}, "liveness": {"score": 0.6613102393746827, "passed": true}}
-{"ts": "2025-11-07T15:59:32.891344Z", "label": "neutral", "confidence": 0.98641753894516, "bbox": {"x": 516, "y": 264, "w": 244, "h": 244}, "liveness": {"score": 0.6584452413569412, "passed": true}}
-{"ts": "2025-11-07T15:59:45.679152Z", "label": "neutral", "confidence": 0.9896621492628873, "bbox": {"x": 464, "y": 287, "w": 252, "h": 252}, "liveness": {"score": 0.6587992589371374, "passed": true}}
-{"ts": "2025-11-07T15:59:49.437402Z", "label": "angry", "confidence": 0.37710110076872444, "bbox": {"x": 423, "y": 160, "w": 402, "h": 402}, "liveness": {"score": 0.6665958012188359, "passed": true}}
-{"ts": "2025-11-07T15:59:53.149796Z", "label": "fear", "confidence": 0.5636221422653177, "bbox": {"x": 0, "y": 0, "w": 1279, "h": 719}, "liveness": {"score": 0.6984221431774138, "passed": true}}
-{"ts": "2025-11-07T16:09:32.208422Z", "label": "neutral", "confidence": 0.8930228278067995, "bbox": {"x": 459, "y": 282, "w": 268, "h": 268}, "liveness": {"score": 0.661725335585553, "passed": true}}
-{"ts": "2025-11-07T16:09:40.289515Z", "label": "angry", "confidence": 0.46331078682047233, "bbox": {"x": 447, "y": 196, "w": 333, "h": 333}, "liveness": {"score": 0.6604314830565743, "passed": true}}
-{"ts": "2025-11-07T16:09:44.074010Z", "label": "neutral", "confidence": 0.9226226715830864, "bbox": {"x": 454, "y": 205, "w": 325, "h": 325}, "liveness": {"score": 0.6648172429437779, "passed": true}}
-{"ts": "2025-11-07T16:09:47.744117Z", "label": "sad", "confidence": 0.3957826941316156, "bbox": {"x": 504, "y": 209, "w": 321, "h": 321}, "liveness": {"score": 0.6605599974878736, "passed": true}}
-{"ts": "2025-11-07T16:09:51.486639Z", "label": "neutral", "confidence": 0.46396484005250965, "bbox": {"x": 488, "y": 207, "w": 325, "h": 325}, "liveness": {"score": 0.6600346314821481, "passed": true}}
-{"ts": "2025-11-07T16:09:55.292269Z", "label": "fear", "confidence": 0.8113577257904702, "bbox": {"x": 0, "y": 0, "w": 1279, "h": 719}, "liveness": {"score": 0.7027797110275267, "passed": true}}
-{"ts": "2025-11-07T16:09:58.985418Z", "label": "fear", "confidence": 0.9609488684551118, "bbox": {"x": 0, "y": 0, "w": 1279, "h": 719}, "liveness": {"score": 0.704528380190822, "passed": true}}
-{"ts": "2025-11-07T16:18:56.865757Z", "label": "neutral", "confidence": 0.993018444880682, "bbox": {"x": 517, "y": 322, "w": 295, "h": 295}, "liveness": {"score": 0.6863141271231188, "passed": true}}
-{"ts": "2025-11-07T16:19:05.964672Z", "label": "angry", "confidence": 0.628036632626866, "bbox": {"x": 420, "y": 225, "w": 416, "h": 416}, "liveness": {"score": 0.6657116899338809, "passed": true}}
-{"ts": "2025-11-07T16:19:09.712302Z", "label": "fear", "confidence": 0.9747275177785174, "bbox": {"x": 0, "y": 0, "w": 1279, "h": 719}, "liveness": {"score": 0.7009417244594028, "passed": true}}
-{"ts": "2025-11-07T16:19:13.563681Z", "label": "neutral", "confidence": 0.4734377241325319, "bbox": {"x": 492, "y": 257, "w": 379, "h": 379}, "liveness": {"score": 0.6608550576399298, "passed": true}}
-{"ts": "2025-11-07T16:19:17.371556Z", "label": "angry", "confidence": 0.8567973900584439, "bbox": {"x": 509, "y": 261, "w": 400, "h": 400}, "liveness": {"score": 0.6654918508478733, "passed": true}}
-{"ts": "2025-11-07T16:19:21.202087Z", "label": "neutral", "confidence": 0.5988195713410224, "bbox": {"x": 511, "y": 260, "w": 400, "h": 400}, "liveness": {"score": 0.7263316970262484, "passed": true}}
-{"ts": "2025-11-07T16:19:25.017369Z", "label": "neutral", "confidence": 0.9512027881888452, "bbox": {"x": 455, "y": 200, "w": 342, "h": 342}, "liveness": {"score": 0.6621470654282934, "passed": true}}
-{"ts": "2025-11-07T16:19:28.802382Z", "label": "neutral", "confidence": 0.8459742038411678, "bbox": {"x": 455, "y": 209, "w": 336, "h": 336}, "liveness": {"score": 0.6669693090401494, "passed": true}}
-{"ts": "2025-11-07T16:22:49.891025Z", "label": "angry", "confidence": 0.843027445801596, "bbox": {"x": 414, "y": 316, "w": 336, "h": 336}, "liveness": {"score": 0.6720981810779973, "passed": true}}
-{"ts": "2025-11-07T16:22:53.626045Z", "label": "angry", "confidence": 0.47068678260057195, "bbox": {"x": 406, "y": 311, "w": 343, "h": 343}, "liveness": {"score": 0.6674621432404232, "passed": true}}
-{"ts": "2025-11-07T16:22:57.305692Z", "label": "angry", "confidence": 0.8623734359506484, "bbox": {"x": 416, "y": 311, "w": 336, "h": 336}, "liveness": {"score": 0.6740963318263661, "passed": true}}
-{"ts": "2025-11-07T16:23:01.085469Z", "label": "angry", "confidence": 0.9201437264336217, "bbox": {"x": 415, "y": 307, "w": 319, "h": 319}, "liveness": {"score": 0.6626190889441593, "passed": true}}
-{"ts": "2025-11-07T16:23:05.470199Z", "label": "neutral", "confidence": 0.43647088109989995, "bbox": {"x": 420, "y": 314, "w": 300, "h": 300}, "liveness": {"score": 0.6591020227912153, "passed": true}}
-{"ts": "2025-11-07T16:23:09.562049Z", "label": "neutral", "confidence": 0.567565506031055, "bbox": {"x": 508, "y": 324, "w": 263, "h": 263}, "liveness": {"score": 0.6563354670302943, "passed": true}}
-{"ts": "2025-11-07T16:23:15.333430Z", "label": "neutral", "confidence": 0.6469364467353654, "bbox": {"x": 491, "y": 321, "w": 274, "h": 274}, "liveness": {"score": 0.6583673416124867, "passed": true}}
+{"ts": "2025-11-13T13:49:50.040767Z", "label": "neutral", "confidence": 0.9702457647712122, "liveness": {"score": 0.9957607388496399, "passed": true}}
+{"ts": "2025-11-13T13:49:57.610479Z", "label": "neutral", "confidence": 0.9956038248129165, "liveness": {"score": 0.9993772804737091, "passed": true}}
+{"ts": "2025-11-13T13:50:02.416626Z", "label": "neutral", "confidence": 0.3551617562325079, "liveness": {"score": 0.9993299841880798, "passed": true}}
+{"ts": "2025-11-13T13:50:07.378949Z", "label": "neutral", "confidence": 0.9742661029078872, "liveness": {"score": 0.9995608925819397, "passed": true}}
+{"ts": "2025-11-13T13:51:26.829006Z", "label": "neutral", "confidence": 0.9980816009512055, "liveness": {"score": 0.9998227059841156, "passed": true}}
+{"ts": "2025-11-13T13:51:31.167936Z", "label": "neutral", "confidence": 0.9927190266953785, "liveness": {"score": 0.9995697438716888, "passed": true}}
+{"ts": "2025-11-13T13:51:35.615522Z", "label": "sad", "confidence": 0.8457092404494375, "liveness": {"score": 0.9780860841274261, "passed": true}}
+{"ts": "2025-11-13T13:51:39.967150Z", "label": "fear", "confidence": 0.9990984984837968, "liveness": {"score": 0.992828905582428, "passed": true}}
+{"ts": "2025-11-13T13:51:44.364363Z", "label": "neutral", "confidence": 0.989625387263435, "liveness": {"score": 0.999227374792099, "passed": true}}
+{"ts": "2025-11-13T13:51:48.773458Z", "label": "neutral", "confidence": 0.999134111568554, "liveness": {"score": 0.9968192279338837, "passed": true}}
+{"ts": "2025-11-13T13:51:53.157808Z", "label": "neutral", "confidence": 0.9999192331242907, "liveness": {"score": 0.9986256062984467, "passed": true}}
+{"ts": "2025-11-13T14:02:10.406381Z", "label": "neutral", "confidence": 0.8221929561346045, "liveness": {"score": 0.9998851418495178, "passed": true}}
+{"ts": "2025-11-13T14:03:22.763982Z", "label": "neutral", "confidence": 0.9991472961544802, "liveness": {"score": 0.9887814223766327, "passed": true}}
+{"ts": "2025-11-13T14:21:33.580423Z", "label": "neutral", "confidence": 0.8526700231909722, "liveness": {"score": 0.9998174607753754, "passed": true}}
+{"ts": "2025-11-13T14:21:51.523617Z", "label": "fear", "confidence": 0.9939226498247149, "liveness": {"score": 0.9936767518520355, "passed": true}}
+{"ts": "2025-11-13T14:22:09.839233Z", "label": "fear", "confidence": 0.5049976902003199, "liveness": {"score": 0.9886282384395599, "passed": true}}
+{"ts": "2025-11-13T14:22:21.889661Z", "label": "neutral", "confidence": 0.7093518299847957, "liveness": {"score": 0.9993594288825989, "passed": true}}
+{"ts": "2025-11-13T14:22:32.487444Z", "label": "neutral", "confidence": 0.9971280188667322, "liveness": {"score": 0.9905341863632202, "passed": true}}
+{"ts": "2025-11-13T14:23:41.922095Z", "label": "neutral", "confidence": 0.9509603933684095, "liveness": {"score": 0.998854786157608, "passed": true}}
+{"ts": "2025-11-13T14:23:56.456289Z", "label": "neutral", "confidence": 0.9938638160943248, "liveness": {"score": 0.9956170320510864, "passed": true}}
+{"ts": "2025-11-13T14:24:58.574514Z", "label": "neutral", "confidence": 0.9777200047406781, "liveness": {"score": 0.9962052702903748, "passed": true}}
+{"ts": "2025-11-13T14:25:02.915653Z", "label": "neutral", "confidence": 0.9796090473630674, "liveness": {"score": 0.9951949119567871, "passed": true}}
+{"ts": "2025-11-13T14:25:07.238702Z", "label": "neutral", "confidence": 0.6637135847245533, "liveness": {"score": 0.9668023884296417, "passed": true}}
+{"ts": "2025-11-13T14:25:11.598973Z", "label": "fear", "confidence": 0.6613368165200232, "liveness": {"score": 0.9851565361022949, "passed": true}}
+{"ts": "2025-11-13T14:25:15.944802Z", "label": "neutral", "confidence": 0.711069816318624, "liveness": {"score": 0.9963249266147614, "passed": true}}
+{"ts": "2025-11-13T14:26:51.176032Z", "label": "neutral", "confidence": 0.9988689409023072, "liveness": {"score": 0.9977944493293762, "passed": true}}
+{"ts": "2025-11-13T14:26:55.975459Z", "label": "neutral", "confidence": 0.9983718097127144, "liveness": {"score": 0.9990203976631165, "passed": true}}
+{"ts": "2025-11-13T14:27:40.072348Z", "label": "neutral", "confidence": 0.9962503230437316, "liveness": {"score": 0.9958980083465576, "passed": true}}
+{"ts": "2025-11-13T14:27:44.394270Z", "label": "happy", "confidence": 0.9965393801347996, "liveness": {"score": 0.9980692863464355, "passed": true}}
+{"ts": "2025-11-13T14:27:57.652960Z", "label": "neutral", "confidence": 0.9690482122733506, "liveness": {"score": 0.9978951215744019, "passed": true}}
+{"ts": "2025-11-13T14:28:07.323974Z", "label": "neutral", "confidence": 0.9627384149255869, "liveness": {"score": 0.993421196937561, "passed": true}}
+{"ts": "2025-11-13T14:29:27.411327Z", "label": "happy", "confidence": 0.9999779523495729, "liveness": {"score": 0.9968352019786835, "passed": true}}
+{"ts": "2025-11-13T14:31:26.302698Z", "label": "neutral", "confidence": 0.6366080636375786, "liveness": {"score": 0.999823123216629, "passed": true}}
+{"ts": "2025-11-13T14:32:27.293102Z", "label": "neutral", "confidence": 0.9986868531163897, "liveness": {"score": 0.9963634312152863, "passed": true}}
+{"ts": "2025-11-13T14:32:38.492082Z", "label": "happy", "confidence": 0.8606584124832962, "liveness": {"score": 0.9965841174125671, "passed": true}}
+{"ts": "2025-11-13T14:32:49.826217Z", "label": "angry", "confidence": 0.6575328448226441, "liveness": {"score": 0.998713344335556, "passed": true}}
+{"ts": "2025-11-13T14:32:56.482741Z", "label": "neutral", "confidence": 0.7973481959557381, "liveness": {"score": 0.9884231686592102, "passed": true}}
+{"ts": "2025-11-13T14:36:19.862087Z", "label": "neutral", "confidence": 0.9999660773423775, "liveness": {"score": 0.9967329502105713, "passed": true}}
+{"ts": "2025-11-13T14:37:15.106144Z", "label": "neutral", "confidence": 0.999792713977315, "liveness": {"score": 0.9988128244876862, "passed": true}}
+{"ts": "2025-11-13T14:38:09.298570Z", "label": "neutral", "confidence": 0.966178180189799, "liveness": {"score": 0.9858190417289734, "passed": true}}
+{"ts": "2025-11-13T14:38:13.697570Z", "label": "neutral", "confidence": 0.5119697138352355, "liveness": {"score": 0.9964305758476257, "passed": true}}
+{"ts": "2025-11-13T14:38:18.088227Z", "label": "sad", "confidence": 0.5224460674181977, "liveness": {"score": 0.9967824220657349, "passed": true}}
+{"ts": "2025-11-13T14:38:22.518326Z", "label": "sad", "confidence": 0.6355527245850263, "liveness": {"score": 0.9973991215229034, "passed": true}}
+{"ts": "2025-11-13T14:41:51.671094Z", "label": "sad", "confidence": 0.6026208899377833, "liveness": {"score": 0.9961144030094147, "passed": true}}
+{"ts": "2025-11-13T14:46:32.843769Z", "label": "neutral", "confidence": 0.8996315405136222, "liveness": {"score": 0.9811586737632751, "passed": true}}
+{"ts": "2025-11-13T14:47:01.800217Z", "label": "fear", "confidence": 0.9326468637660661, "liveness": {"score": 0.9924646019935608, "passed": true}}
+{"ts": "2025-11-13T14:48:37.739958Z", "label": "happy", "confidence": 0.39016632993816164, "liveness": {"score": 0.999576985836029, "passed": true}}
+{"ts": "2025-11-13T14:48:42.125873Z", "label": "neutral", "confidence": 0.9900471898260363, "liveness": {"score": 0.99956876039505, "passed": true}}
+{"ts": "2025-11-13T14:48:46.519178Z", "label": "neutral", "confidence": 0.9017229019638834, "liveness": {"score": 0.9998142719268799, "passed": true}}
+{"ts": "2025-11-13T14:48:50.800392Z", "label": "sad", "confidence": 0.9974236653059505, "liveness": {"score": 0.8703200221061707, "passed": true}}
+{"ts": "2025-11-13T14:48:55.226528Z", "label": "sad", "confidence": 0.9102748631258902, "liveness": {"score": 0.9995995759963989, "passed": true}}
+{"ts": "2025-11-13T14:48:59.679504Z", "label": "neutral", "confidence": 0.9907180754087147, "liveness": {"score": 0.9996458292007446, "passed": true}}
+{"ts": "2025-11-13T14:49:04.052650Z", "label": "fear", "confidence": 0.49234137735384054, "liveness": {"score": 0.9995160102844238, "passed": true}}
+{"ts": "2025-11-13T14:49:08.428051Z", "label": "neutral", "confidence": 0.8132582487343649, "liveness": {"score": 0.9966108798980713, "passed": true}}
+{"ts": "2025-11-13T14:49:12.781946Z", "label": "neutral", "confidence": 0.914771770152875, "liveness": {"score": 0.9996146857738495, "passed": true}}
+{"ts": "2025-11-13T14:49:37.471088Z", "label": "neutral", "confidence": 0.9993351624686263, "liveness": {"score": 0.9986091554164886, "passed": true}}
+{"ts": "2025-11-13T14:49:42.151466Z", "label": "angry", "confidence": 0.7954669859707761, "liveness": {"score": 0.9971655607223511, "passed": true}}
+{"ts": "2025-11-13T14:49:54.465570Z", "label": "neutral", "confidence": 0.9910400230484776, "liveness": {"score": 0.9940986037254333, "passed": true}}
+{"ts": "2025-11-13T14:54:51.158132Z", "label": "neutral", "confidence": 0.856934876001556, "liveness": {"score": 0.9991447925567627, "passed": true}}
+{"ts": "2025-11-13T14:57:52.434844Z", "label": "neutral", "confidence": 0.987023195194041, "liveness": {"score": 0.9986030757427216, "passed": true}}
+{"ts": "2025-11-13T15:04:09.515227Z", "label": "sad", "confidence": 0.5298633433334367, "liveness": {"score": 0.9992754757404327, "passed": true}}
+{"ts": "2025-11-13T15:04:15.988519Z", "label": "neutral", "confidence": 0.77248659363254, "liveness": {"score": 0.9995032548904419, "passed": true}}
+{"ts": "2025-11-13T15:04:20.317875Z", "label": "neutral", "confidence": 0.6401525652023118, "liveness": {"score": 0.9993221461772919, "passed": true}}
+{"ts": "2025-11-13T15:04:24.767066Z", "label": "neutral", "confidence": 0.9303320662683845, "liveness": {"score": 0.9987508356571198, "passed": true}}
+{"ts": "2025-11-13T15:04:29.125244Z", "label": "fear", "confidence": 0.9997240903896942, "liveness": {"score": 0.9965051710605621, "passed": true}}
+{"ts": "2025-11-13T15:11:49.867902Z", "label": "neutral", "confidence": 0.513216729619093, "liveness": {"score": 0.9992873072624207, "passed": true}}
+{"ts": "2025-11-13T15:11:57.368555Z", "label": "neutral", "confidence": 0.9842025124790985, "liveness": {"score": 0.9949600994586945, "passed": true}}

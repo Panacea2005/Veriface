@@ -77,6 +77,15 @@ export default function RegistryDialog({ open, onOpenChange }: RegistryDialogPro
     setError(null)
     try {
       const res = await fetchRegistry({ project: "pca2d", includeVectors: true, limitPerUser: 5000 })
+      // Backend returns total counts, but vectors may be limited
+      // Use counts from backend (total) for display, vectors for detail view
+      console.log("Registry data:", { 
+        users: res.users.length, 
+        counts: res.counts, 
+        hasVectors: !!res.vectors,
+        vectorsKeys: res.vectors ? Object.keys(res.vectors) : [],
+        vectorsLengths: res.vectors ? Object.fromEntries(Object.entries(res.vectors).map(([k, v]) => [k, Array.isArray(v) ? v.length : 0])) : {}
+      })
       setData(res)
       if (res.users.length > 0) {
         const nextUser = preferredUser && res.users.includes(preferredUser)
@@ -94,10 +103,27 @@ export default function RegistryDialog({ open, onOpenChange }: RegistryDialogPro
   }, [])
 
   React.useEffect(() => {
-    if (!open) return
+    if (!open) {
+      setData(null)
+      setSelectedUser(null)
+      return
+    }
     refreshRegistry(selectedUser)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
+
+  // Listen for registry update events
+  React.useEffect(() => {
+    const handleRegistryUpdate = () => {
+      if (open) {
+        refreshRegistry(selectedUser)
+      }
+    }
+    window.addEventListener('registry-updated', handleRegistryUpdate)
+    return () => {
+      window.removeEventListener('registry-updated', handleRegistryUpdate)
+    }
+  }, [open, selectedUser, refreshRegistry])
 
   const filteredUsers = React.useMemo(() => {
     if (!data) return []
@@ -118,6 +144,12 @@ export default function RegistryDialog({ open, onOpenChange }: RegistryDialogPro
 
         <div className="px-6 pb-6">
           {error && <div className="text-sm text-red-500 mb-3">{error}</div>}
+          {loading && !data && (
+            <div className="flex items-center justify-center py-12">
+              <div className="text-sm text-foreground/70">Loading registry...</div>
+            </div>
+          )}
+          {!loading && data && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Left: list */}
             <div className="md:col-span-1 border rounded-lg">
@@ -126,24 +158,33 @@ export default function RegistryDialog({ open, onOpenChange }: RegistryDialogPro
               </div>
               <ScrollArea className="h-[420px]">
                 <ul className="divide-y">
-                  {filteredUsers.map((u) => (
+                  {filteredUsers.length === 0 && !loading ? (
+                    <li className="px-3 py-4 text-sm text-foreground/70">No users found</li>
+                  ) : (
+                  filteredUsers.map((u) => {
+                    const userName = data?.names?.[u] || u
+                    return (
                     <li key={u} className={`flex items-center justify-between px-3 py-2 cursor-pointer hover:bg-muted ${selectedUser === u ? "bg-muted" : ""}`} onClick={() => setSelectedUser(u)}>
-                      <div className="flex items-center gap-2">
-                        <span className="inline-block w-2.5 h-2.5 rounded-full" style={{ background: colorForUser(u) }} />
-                        <span className="text-sm font-medium">{u}</span>
+                      <div className="flex items-center gap-2 min-w-0 flex-1">
+                        <span className="inline-block w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: colorForUser(u) }} />
+                        <div className="flex flex-col min-w-0 flex-1">
+                          <span className="text-sm font-medium truncate">{userName}</span>
+                          <span className="text-xs text-muted-foreground font-mono">{u}</span>
+                        </div>
                       </div>
-                      <Badge variant="secondary">{data?.counts[u] ?? 0}</Badge>
+                      <Badge variant="secondary" className="ml-2 flex-shrink-0">{data?.counts[u] ?? 0}</Badge>
                     </li>
-                  ))}
-                  {filteredUsers.length === 0 && (
-                    <li className="px-3 py-4 text-sm text-foreground/70">No users</li>
-                  )}
+                  )}))}
                 </ul>
               </ScrollArea>
               {selectedUser && (
                 <div className="p-3 border-t flex items-center justify-between">
                   <div className="text-xs text-foreground/80">
-                    Showing embeddings for <span className="font-medium text-foreground">{selectedUser}</span>
+                    <div className="flex flex-col gap-0.5">
+                      <span>Showing embeddings for</span>
+                      <span className="font-medium text-foreground">{data?.names?.[selectedUser] || selectedUser}</span>
+                      <span className="font-mono text-xs text-muted-foreground">{selectedUser}</span>
+                    </div>
                   </div>
                   <Button
                     size="sm"
@@ -151,10 +192,11 @@ export default function RegistryDialog({ open, onOpenChange }: RegistryDialogPro
                     disabled={busy}
                     onClick={() => {
                       const userToDelete = selectedUser
+                      const userName = data?.names?.[userToDelete] || userToDelete
                       if (!userToDelete) return
                       openConfirm({
-                        title: `Delete '${userToDelete}'?`,
-                        description: "All embeddings for this user will be permanently removed.",
+                        title: `Delete '${userName}'?`,
+                        description: `All embeddings for ${userName} (${userToDelete}) will be permanently removed.`,
                         confirmLabel: "Delete",
                         variant: "destructive",
                         action: async () => {
@@ -192,8 +234,15 @@ export default function RegistryDialog({ open, onOpenChange }: RegistryDialogPro
                 <div className="text-xs text-foreground/80">
                   {selectedUser ? (
                     <>
-                      <Badge className="mr-2" style={{ background: colorForUser(selectedUser), color: "#fff" }}>{selectedUser}</Badge>
-                      {(data?.vectors?.[selectedUser]?.length || 0)} vectors
+                      <div className="flex flex-col items-end gap-1">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">{data?.names?.[selectedUser] || selectedUser}</span>
+                          <Badge variant="secondary" className="font-mono text-xs">{selectedUser}</Badge>
+                        </div>
+                        <span className="text-xs">
+                          {(data?.vectors?.[selectedUser]?.length || data?.counts?.[selectedUser] || 0)} embedding{(data?.vectors?.[selectedUser]?.length || data?.counts?.[selectedUser] || 0) !== 1 ? 's' : ''}
+                        </span>
+                      </div>
                     </>
                   ) : (
                     <>Select a user to view vectors</>
@@ -202,66 +251,74 @@ export default function RegistryDialog({ open, onOpenChange }: RegistryDialogPro
               </div>
               <ScrollArea className="h-[70vh]">
                 <div className="p-4 grid gap-3" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(380px, 1fr))" }}>
-                  {selectedUser && (data?.vectors?.[selectedUser] ?? []).map((vec, i) => (
+                  {selectedUser && data?.vectors?.[selectedUser] && Array.isArray(data.vectors[selectedUser]) && data.vectors[selectedUser].length > 0 ? (
+                    data.vectors[selectedUser].map((vec, i) => (
                     <div key={i} className="border rounded-md bg-white/50 dark:bg-black/30">
                       <div className="px-3 py-2 text-xs font-medium bg-muted/60 border-b flex items-center justify-between">
                         <span>Embedding #{i + 1}</span>
                         <div className="flex items-center gap-2">
-                          <span className="text-foreground/70">{vec.length} dims</span>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            disabled={busy}
-                            onClick={() => {
-                              const userId = selectedUser
-                              const embeddingIndex = i
-                              if (!userId) return
-                              openConfirm({
-                                title: `Delete embedding #${embeddingIndex + 1}?`,
-                                description: `This will remove embedding #${embeddingIndex + 1} for '${userId}'.`,
-                                confirmLabel: "Delete",
-                                variant: "destructive",
-                                action: async () => {
+                            <span className="text-foreground/70">{vec.length} dims</span>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              disabled={busy}
+                              onClick={() => {
+                                const userId = selectedUser
+                                const embeddingIndex = i
+                                if (!userId) return
+                                openConfirm({
+                                  title: `Delete embedding #${embeddingIndex + 1}?`,
+                                  description: `This will remove embedding #${embeddingIndex + 1} for '${userId}'.`,
+                                  confirmLabel: "Delete",
+                                  variant: "destructive",
+                                  action: async () => {
                               setBusy(true)
                               try {
-                                    const result = await deleteRegistryEmbedding(userId, embeddingIndex)
-                                    toast({
-                                      title: "Embedding deleted",
-                                      description: `Removed embedding #${(result.deleted_index ?? embeddingIndex) + 1} for ${userId}.`
-                                    })
-                                    await refreshRegistry(userId)
-                                  } catch (e) {
-                                    toast({
-                                      variant: "destructive",
-                                      title: "Delete failed",
-                                      description: e instanceof Error ? e.message : String(e)
-                                    })
+                                      const result = await deleteRegistryEmbedding(userId, embeddingIndex)
+                                      toast({
+                                        title: "Embedding deleted",
+                                        description: `Removed embedding #${(result.deleted_index ?? embeddingIndex) + 1} for ${userId}.`
+                                      })
+                                      await refreshRegistry(userId)
+                                    } catch (e) {
+                                      toast({
+                                        variant: "destructive",
+                                        title: "Delete failed",
+                                        description: e instanceof Error ? e.message : String(e)
+                                      })
                               } finally {
                                 setBusy(false)
                               }
-                                }
-                              })
-                            }}
-                          >
-                            Delete
-                          </Button>
+                                  }
+                                })
+                              }}
+                            >
+                              Delete
+                            </Button>
                         </div>
                       </div>
                       <div className="px-3 py-2 font-mono text-[11px] leading-relaxed text-foreground/90 whitespace-pre-wrap break-words">
                         [{vec.map(v => Number.parseFloat(String(v)).toFixed(4)).join(", ")}]
                       </div>
                     </div>
-                  ))}
-                  {selectedUser && (data?.vectors?.[selectedUser]?.length ?? 0) === 0 && (
-                    <div className="text-sm text-foreground/70">No vectors available for this user.</div>
-                  )}
-                  {!selectedUser && (
+                    ))
+                  ) : selectedUser ? (
+                    <div className="text-sm text-foreground/70">
+                      {loading ? "Loading embeddings..." : `No embeddings available for ${selectedUser}. Count: ${data?.counts?.[selectedUser] ?? 0}`}
+                    </div>
+                  ) : (
                     <div className="text-sm text-foreground/70">Choose a user from the left panel.</div>
                   )}
                 </div>
               </ScrollArea>
             </div>
           </div>
+          )}
+          {!loading && !data && !error && (
+            <div className="flex items-center justify-center py-12">
+              <div className="text-sm text-foreground/70">No registry data available</div>
+            </div>
+          )}
         </div>
       </DialogContent>
       <AlertDialog open={confirmState.open} onOpenChange={(open) => setConfirmState(prev => ({ ...prev, open }))}>

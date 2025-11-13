@@ -27,4 +27,6 @@ torch>=2.0.0
 # ONNX runtime (optional, only for embeddings when using ONNX models)
 # onnxruntime==1.23.2  # Commented out - using PyTorch .pth models instead
 
+# Load env from .env file
+python-dotenv==1.0.1
 

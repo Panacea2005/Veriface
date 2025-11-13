@@ -28,16 +28,13 @@ class SEModule(nn.Module):
 class bottleneck_IR(nn.Module):
     def __init__(self, in_channel, depth, stride):
         super(bottleneck_IR, self).__init__()
-        # Always use Sequential downsample to match checkpoint structure
-        # Even when in_channel == depth, checkpoint still has downsample.0 and downsample.1
+        # Only create downsample when needed (channel mismatch or stride != 1)
+        # This matches InsightFace iResNet implementation
         if in_channel == depth and stride == 1:
-            # For stride=1 and same channels, use identity-like downsample
-            self.downsample = nn.Sequential(
-                nn.Conv2d(in_channel, depth, (1, 1), stride, bias=False),
-                nn.BatchNorm2d(depth)
-            )
+            # No downsample needed - use identity shortcut
+            self.downsample = None
         else:
-            # Match checkpoint: downsample.0 (conv) and downsample.1 (bn)
+            # Need downsample: create Sequential with conv + bn
             self.downsample = nn.Sequential(
                 nn.Conv2d(in_channel, depth, (1, 1), stride, bias=False),
                 nn.BatchNorm2d(depth)
@@ -51,7 +48,8 @@ class bottleneck_IR(nn.Module):
         self.bn3 = nn.BatchNorm2d(depth)
 
     def forward(self, x):
-        shortcut = self.downsample(x)
+        # Use downsample if exists, otherwise identity shortcut
+        shortcut = self.downsample(x) if self.downsample is not None else x
         res = self.bn1(x)
         res = self.conv1(res)
         res = self.bn2(res)

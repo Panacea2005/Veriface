@@ -6,6 +6,7 @@ from app.routers import health, register, verify, registry as registry_router
 from app.routers import emotion_logs
 from app.routers import emotion_rt
 from app.routers import attendance
+from app.routers import emotion_analytics
 import traceback
 import sys
 import os
@@ -29,6 +30,7 @@ app.include_router(registry_router.router)
 app.include_router(emotion_logs.router)
 app.include_router(emotion_rt.router)
 app.include_router(attendance.router)
+app.include_router(emotion_analytics.router)
 
 @app.on_event("startup")
 async def startup_event():

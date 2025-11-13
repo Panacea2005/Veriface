@@ -5,6 +5,7 @@ import { Header } from "@/components/header"
 import { WebcamSection } from "@/components/webcam-section"
 import { ResultsCard } from "@/components/results-card"
 import { AttendanceHistory } from "@/components/attendance-history"
+import { EmotionInsights } from "@/components/emotion-insights"
 import { Footer } from "@/components/footer"
 import { Toaster } from "@/components/ui/toaster"
 import type { VerifyResponse } from "@/lib/api"
@@ -99,6 +100,11 @@ export default function Page() {
             {/* Attendance History Section - Full Width */}
             <div id="attendance">
               <AttendanceHistory verifyResult={verifyResult} />
+            </div>
+
+            {/* Emotion Insights Section - Full Width */}
+            <div id="insights">
+              <EmotionInsights />
             </div>
           </div>
         </main>

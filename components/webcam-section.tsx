@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect, useCallback } from "react"
-import { Camera, RefreshCw, Upload, CheckCircle2, AlertCircle, RotateCcw } from "lucide-react"
+import { Camera, RefreshCw, Upload, CheckCircle2, AlertCircle, RotateCcw, ShieldAlert, LogIn, LogOut } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { RegisterDrawer } from "@/components/register-drawer"
@@ -11,6 +11,14 @@ import { useToast } from "@/hooks/use-toast"
 import type { VerifyResponse, HealthResponse } from "@/lib/api"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import RegistryDialog from "@/components/registry-dialog"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { Badge } from "@/components/ui/badge"
 
 interface WebcamSectionProps {
   onVerifyResult: (result: VerifyResponse | null) => void
@@ -28,7 +36,7 @@ export function WebcamSection({ onVerifyResult }: WebcamSectionProps) {
   const [position, setPosition] = useState({ x: 0, y: 0 })
   const [isDragging, setIsDragging] = useState(false)
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 })
-  const [isFlipped, setIsFlipped] = useState(false)
+  const [isFlipped, setIsFlipped] = useState(true)
   const [registryInfo, setRegistryInfo] = useState<HealthResponse["registry"] | null>(null)
   
   // Webcam refs
@@ -43,6 +51,8 @@ export function WebcamSection({ onVerifyResult }: WebcamSectionProps) {
   const [liveEmotion, setLiveEmotion] = useState<{ label: string; probs: Record<string, number> } | null>(null)
   const emotionTickRef = useRef<boolean>(false)
   const [lastVerify, setLastVerify] = useState<VerifyResponse | null>(null)
+  const [spoofDialogOpen, setSpoofDialogOpen] = useState(false)
+  const [spoofMessage, setSpoofMessage] = useState<string>("")
 
   // Load registry info on mount and listen for registry updates
   useEffect(() => {
@@ -151,7 +161,12 @@ export function WebcamSection({ onVerifyResult }: WebcamSectionProps) {
       canvas.height = video.videoHeight
       const ctx = canvas.getContext("2d")
       if (!ctx) return
+      // Flip horizontal for mirror effect
+      ctx.save()
+      ctx.translate(canvas.width, 0)
+      ctx.scale(-1, 1)
       ctx.drawImage(video, 0, 0)
+      ctx.restore()
       emotionTickRef.current = true
       canvas.toBlob(async (blob) => {
         try {
@@ -183,7 +198,12 @@ export function WebcamSection({ onVerifyResult }: WebcamSectionProps) {
     
     const ctx = canvas.getContext("2d")
     if (ctx) {
+      // Flip horizontal for mirror effect
+      ctx.save()
+      ctx.translate(canvas.width, 0)
+      ctx.scale(-1, 1)
       ctx.drawImage(video, 0, 0)
+      ctx.restore()
       canvas.toBlob((blob) => {
         if (blob) {
           const file = new File([blob], "capture.jpg", { type: "image/jpeg" })
@@ -221,7 +241,7 @@ export function WebcamSection({ onVerifyResult }: WebcamSectionProps) {
 
     setIsCapturing(true)
     try {
-      const result = await verifyFace(selectedImage, "A", "cosine")
+      const result = await verifyFace(selectedImage)
       onVerifyResult(result)
       setLastVerify(result)
       if (result.emotion_label) {
@@ -230,15 +250,27 @@ export function WebcamSection({ onVerifyResult }: WebcamSectionProps) {
       toast({
         title: "Verification complete",
         description: result.matched_id 
-          ? `Matched: ${result.matched_id} (${(result.score! * 100).toFixed(1)}%)`
+          ? `Matched: ${result.matched_name || result.matched_id} (ID: ${result.matched_id}) - ${(result.score! * 100).toFixed(1)}%`
           : "No match found",
       })
     } catch (error) {
-      toast({
-        title: "Verification failed",
-        description: error instanceof Error ? error.message : "Unknown error",
-        variant: "destructive",
-      })
+      // Prevent error from propagating to Next.js error boundary
+      const errorMessage = error instanceof Error ? error.message : "Unknown error"
+      
+      // Check if it's a spoof detection error
+      if (errorMessage.toLowerCase().includes("spoof") || errorMessage.toLowerCase().includes("liveness") || errorMessage.toLowerCase().includes("anti-spoof")) {
+        // Show spoof dialog
+        setSpoofMessage(errorMessage)
+        setSpoofDialogOpen(true)
+        // Don't log to console to avoid Next.js error
+      } else {
+        // Show toast for other errors
+        toast({
+          title: "Verification failed",
+          description: errorMessage,
+          variant: "destructive",
+        })
+      }
     } finally {
       setIsCapturing(false)
     }
@@ -247,11 +279,15 @@ export function WebcamSection({ onVerifyResult }: WebcamSectionProps) {
   // Use refs to avoid dependency issues
   const onVerifyResultRef = useRef(onVerifyResult)
   const toastRef = useRef(toast)
+  const setSpoofDialogOpenRef = useRef(setSpoofDialogOpen)
+  const setSpoofMessageRef = useRef(setSpoofMessage)
   
   useEffect(() => {
     onVerifyResultRef.current = onVerifyResult
     toastRef.current = toast
-  }, [onVerifyResult, toast])
+    setSpoofDialogOpenRef.current = setSpoofDialogOpen
+    setSpoofMessageRef.current = setSpoofMessage
+  }, [onVerifyResult, toast, setSpoofDialogOpen, setSpoofMessage])
 
   // Auto capture logic
   useEffect(() => {
@@ -272,7 +308,12 @@ export function WebcamSection({ onVerifyResult }: WebcamSectionProps) {
       const ctx = canvas.getContext("2d")
       if (!ctx) return
       
+      // Flip horizontal for mirror effect
+      ctx.save()
+      ctx.translate(canvas.width, 0)
+      ctx.scale(-1, 1)
       ctx.drawImage(video, 0, 0)
+      ctx.restore()
       
       canvas.toBlob(async (blob) => {
         if (!blob) return
@@ -281,7 +322,7 @@ export function WebcamSection({ onVerifyResult }: WebcamSectionProps) {
         setIsCapturing(true)
         
         try {
-          const result = await verifyFace(file, "A", "cosine")
+          const result = await verifyFace(file)
           onVerifyResultRef.current(result)
           setLastVerify(result)
           if (result.emotion_label) {
@@ -290,11 +331,23 @@ export function WebcamSection({ onVerifyResult }: WebcamSectionProps) {
           toastRef.current({
             title: "Auto-verification complete",
             description: result.matched_id 
-              ? `Matched: ${result.matched_id}`
+              ? `Matched: ${result.matched_name || result.matched_id} (ID: ${result.matched_id})`
               : "No match found",
           })
         } catch (error) {
-          console.error("Auto-verification failed:", error)
+          // Prevent error from propagating to Next.js error boundary
+          const errorMessage = error instanceof Error ? error.message : "Unknown error"
+          
+          // Check if it's a spoof detection error
+          if (errorMessage.toLowerCase().includes("spoof") || errorMessage.toLowerCase().includes("liveness") || errorMessage.toLowerCase().includes("anti-spoof")) {
+            // Show spoof dialog
+            setSpoofMessageRef.current(errorMessage)
+            setSpoofDialogOpenRef.current(true)
+            // Don't log to console to avoid Next.js error
+          } else {
+            // Only log non-spoof errors, don't show toast in auto-capture to avoid spam
+            console.error("Auto-verification failed:", error)
+          }
         } finally {
           setIsCapturing(false)
         }
@@ -358,6 +411,11 @@ export function WebcamSection({ onVerifyResult }: WebcamSectionProps) {
     setIsDragging(false)
   }
 
+  const matchScoreDisplay = lastVerify?.score != null ? `${(lastVerify.score * 100).toFixed(1)}%` : "—"
+  const livenessPassed = lastVerify?.liveness?.passed
+  const thresholdDisplay = lastVerify?.threshold != null ? `${(lastVerify.threshold * 100).toFixed(0)}%` : "—"
+  const metricDisplay = lastVerify?.metric ? lastVerify.metric.toUpperCase() : "—"
+
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
       <Card className="flex flex-col overflow-hidden border border-border shadow-sm">
@@ -366,28 +424,31 @@ export function WebcamSection({ onVerifyResult }: WebcamSectionProps) {
             <div>
               <CardTitle className="text-base font-semibold">Face Capture & Verification</CardTitle>
               <CardDescription className="text-xs">Upload image or capture from webcam</CardDescription>
+              {/* Model selection removed; always using Model A */}
             </div>
-            {registryInfo && (
-            <div className="flex flex-col items-end gap-1 text-xs">
-                <div className="flex items-center gap-2">
-                  <div className={`h-2 w-2 rounded-full ${registryInfo.accessible ? "bg-green-500 animate-pulse" : "bg-red-500"}`} />
-                  <span className="text-foreground/80 font-medium">
-                    {registryInfo.accessible ? "Registry Active" : "Registry Inaccessible"}
-                  </span>
-                </div>
-                {registryInfo.accessible && (
-                  <div className="flex flex-col items-end gap-2 text-foreground/70">
-                    <span>
-                      {registryInfo.users_count || 0} user{registryInfo.users_count !== 1 ? 's' : ''} • {registryInfo.total_embeddings || 0} embeddings
-                    </span>
-                    <div className="flex items-center gap-2">
-                      <Button size="sm" variant="outline" onClick={() => setRegistryOpen(true)}>Explore</Button>
-                      <RegisterDrawer />
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
+            <div className="flex items-center gap-3">
+              {registryInfo && (
+               <div className="flex flex-col items-end gap-1 text-xs">
+                 <div className="flex items-center gap-2">
+                   <div className={`h-2 w-2 rounded-full ${registryInfo.accessible ? "bg-green-500 animate-pulse" : "bg-red-500"}`} />
+                   <span className="text-foreground/80 font-medium">
+                     {registryInfo.accessible ? "Registry Active" : "Registry Inaccessible"}
+                   </span>
+                 </div>
+                 {registryInfo.accessible && (
+                   <div className="flex flex-col items-end gap-2 text-foreground/70">
+                     <span>
+                       {registryInfo.users_count || 0} user{registryInfo.users_count !== 1 ? 's' : ''} • {registryInfo.total_embeddings || 0} embeddings
+                     </span>
+                     <div className="flex items-center gap-2">
+                       <Button size="sm" variant="outline" onClick={() => setRegistryOpen(true)}>Explore</Button>
+                       <RegisterDrawer />
+                     </div>
+                   </div>
+                 )}
+               </div>
+             )}
+             </div>
           </div>
         </CardHeader>
         <CardContent className="flex flex-col gap-6">
@@ -506,7 +567,7 @@ export function WebcamSection({ onVerifyResult }: WebcamSectionProps) {
             {/* Right: Status + Emotion + Controls (bento grid) */}
             <div className="grid grid-rows-[auto,1fr,auto] gap-4 h-full">
               {/* Compact Verification Status */}
-              <div className="rounded-lg border border-border p-3 space-y-2">
+              <div className="rounded-lg border border-border p-3 space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-semibold">Status</span>
                   {lastVerify ? (
@@ -520,21 +581,73 @@ export function WebcamSection({ onVerifyResult }: WebcamSectionProps) {
                   )}
                 </div>
                 {lastVerify && (
-                  <div className="text-xs text-foreground/80">
-                    {lastVerify.matched_id ? (
-                      <div className="flex items-center justify-between">
-                        <span>Matched</span>
-                        <span className="font-semibold">{lastVerify.matched_id}</span>
+                  <div className="space-y-3 text-xs">
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-[10px] font-medium uppercase tracking-[0.18em] text-foreground/60">Matched Identity</span>
+                        {lastVerify.matched_id ? (
+                          lastVerify.check_type ? (
+                            <Badge
+                              variant={lastVerify.check_type === "check-out" ? "secondary" : "default"}
+                              className="h-5 px-2 text-[10px] font-semibold font-mono"
+                            >
+                              {lastVerify.check_type === "check-out" ? "OUT" : "IN"}
+                            </Badge>
+                          ) : (
+                            <Badge
+                              variant="outline"
+                              className="h-5 px-2 text-[10px] font-semibold bg-primary/10 text-primary border-primary/30"
+                            >
+                              Matched
+                            </Badge>
+                          )
+                        ) : (
+                          <Badge
+                            variant="outline"
+                            className="h-5 px-2 text-[10px] font-semibold bg-amber-500/20 text-amber-700 dark:text-amber-400 border-amber-500/40"
+                          >
+                            No Match
+                          </Badge>
+                        )}
                       </div>
-                    ) : (
-                      <div className="flex items-center justify-between">
-                        <span>Matched</span>
-                        <span className="font-semibold">None</span>
+                      <p className={`text-sm font-semibold ${lastVerify.matched_id ? "text-foreground" : "text-foreground/60"}`}>
+                        {lastVerify.matched_id ?? "No match detected"}
+                      </p>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 text-[11px] text-foreground/70 md:grid-cols-4">
+                      <div className="rounded-lg border border-border/60 bg-background/80 px-3 py-2">
+                        <span className="text-[10px] uppercase tracking-wide text-foreground/60">Match Score</span>
+                        <span className="block text-sm font-semibold text-foreground">{matchScoreDisplay}</span>
                       </div>
-                    )}
-                    <div className="flex items-center justify-between">
-                      <span>Score</span>
-                      <span className="font-semibold">{lastVerify.score !== null ? `${(lastVerify.score * 100).toFixed(1)}%` : "-"}</span>
+                      <div className="rounded-lg border border-border/60 bg-background/80 px-3 py-2">
+                        <span className="text-[10px] uppercase tracking-wide text-foreground/60">Liveness</span>
+                        <span
+                          className={`block text-sm font-semibold ${
+                            livenessPassed === undefined
+                              ? "text-foreground"
+                              : livenessPassed
+                                ? "text-green-600 dark:text-green-400"
+                                : "text-red-600 dark:text-red-400"
+                          }`}
+                        >
+                          {livenessPassed === undefined
+                            ? "—"
+                            : lastVerify.liveness?.score != null
+                              ? `${(lastVerify.liveness.score * 100).toFixed(1)}% • ${livenessPassed ? "Passed" : "Failed"}`
+                              : livenessPassed
+                                ? "Passed"
+                                : "Failed"}
+                        </span>
+                      </div>
+                      <div className="rounded-lg border border-border/60 bg-background/80 px-3 py-2">
+                        <span className="text-[10px] uppercase tracking-wide text-foreground/60">Threshold</span>
+                        <span className="block text-sm font-semibold text-foreground">{thresholdDisplay}</span>
+                      </div>
+                      <div className="rounded-lg border border-border/60 bg-background/80 px-3 py-2">
+                        <span className="text-[10px] uppercase tracking-wide text-foreground/60">Metric</span>
+                        <span className="block text-sm font-semibold text-foreground">{metricDisplay}</span>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -625,6 +738,45 @@ export function WebcamSection({ onVerifyResult }: WebcamSectionProps) {
           {/* (Right column includes all controls; removed duplicate buttons) */}
         </CardContent>
       </Card>
+
+      {/* Spoof Detection Dialog */}
+      <Dialog open={spoofDialogOpen} onOpenChange={setSpoofDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <div className="flex items-center gap-3 mb-2">
+              <div className="p-2 rounded-full bg-destructive/10">
+                <ShieldAlert className="h-6 w-6 text-destructive" />
+              </div>
+              <DialogTitle className="text-lg font-bold">Spoof Detected</DialogTitle>
+            </div>
+            <DialogDescription className="text-sm text-foreground/70 pt-2">
+              {spoofMessage || "Anti-spoof detection has identified that the image may not be from a real face."}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-sm text-foreground/80 mb-4">
+              For security reasons, verification has been blocked. Please use a real face (not a photo or screen) to verify.
+            </p>
+            <div className="flex flex-col gap-2 text-xs text-foreground/60">
+              <p className="font-medium">Tips:</p>
+              <ul className="list-disc list-inside space-y-1 ml-2">
+                <li>Use your actual face, not a photo</li>
+                <li>Ensure good lighting</li>
+                <li>Look directly at the camera</li>
+                <li>Remove any masks or coverings</li>
+              </ul>
+            </div>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setSpoofDialogOpen(false)}
+            >
+              Understood
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </motion.div>
   )
 }

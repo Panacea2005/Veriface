@@ -12,7 +12,17 @@ async def health():
     try:
         registry_data = registry.get_all()
         registry_count = len(registry_data)
-        total_embeddings = sum(len(vectors) for vectors in registry_data.values())
+        
+        # Handle both old and new registry formats
+        total_embeddings = 0
+        for user_id, data in registry_data.items():
+            if isinstance(data, dict) and 'embeddings' in data:
+                # New format: {user_id: {name, embeddings}}
+                total_embeddings += len(data['embeddings'])
+            elif isinstance(data, list):
+                # Old format: {user_id: [[embeddings]]}
+                total_embeddings += len(data)
+        
         registry_path = registry.path
         
         return {

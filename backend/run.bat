@@ -130,10 +130,20 @@ echo.
 echo Setting environment variables...
 set MODE=heur
 set CORS_ORIGINS=http://localhost:3000,http://localhost:3001
-REM DeepFace is used for emotion, antispoof, and detection; no ONNX/PTH needed
-echo [OK] MODE=%MODE% - Using DeepFace for detection/liveness/emotion
-echo [OK] CORS_ORIGINS=%CORS_ORIGINS%
 set PYTHONUNBUFFERED=1
+REM Enforce PyTorch Model A usage (fail fast if missing)
+set REQUIRE_TORCH=1
+set REQUIRE_MODEL_A=1
+if "%MODEL_WEIGHTS_PATH%"=="" (
+    set MODEL_WEIGHTS_PATH=app\models\modelA_best.pth
+)
+if "%SIMILARITY_METRIC%"=="" (
+    set SIMILARITY_METRIC=cosine
+)
+echo [OK] MODE=%MODE%
+echo [OK] CORS_ORIGINS=%CORS_ORIGINS%
+echo [OK] MODEL_WEIGHTS_PATH=%MODEL_WEIGHTS_PATH%
+echo [OK] SIMILARITY_METRIC=%SIMILARITY_METRIC%
 
 REM Step 4: Create necessary directories
 echo.
@@ -151,18 +161,23 @@ if not exist "app\models" (
     echo [OK] app\models directory exists
 )
 
-REM Step 5: Check and verify PyTorch models
+REM Step 5: Verify PyTorch model files (require Model A)
 echo.
-echo Checking PyTorch embedding models...
-python -c "from pathlib import Path; import sys; models_dir = Path('app/models'); pth_path = models_dir / 'ms1mv3_arcface_r100_fp16.pth'; pth_exists = pth_path.exists(); pth_size = pth_path.stat().st_size if pth_exists else 0; print(f'ms1mv3_arcface_r100_fp16.pth: {\"FOUND\" if pth_exists else \"NOT FOUND\"}' + (f' ({pth_size/1024/1024:.1f} MB)' if pth_exists else '')); sys.exit(0)" 2>nul
+echo Verifying PyTorch embedding model files...
+if not exist "%MODEL_WEIGHTS_PATH%" (
+    echo [ERROR] Missing required model: %MODEL_WEIGHTS_PATH%
+    echo Please place your ArcFace weights ^(512-D backbone^) at the configured path or update MODEL_WEIGHTS_PATH.
+    echo.
+    pause
+    exit /b 1
+)
+
+python scripts\verify_models.py
 if errorlevel 1 (
-    echo [INFO] Checking PyTorch models...
-) else (
-    echo [INFO] Verifying PyTorch model compatibility...
-    python -c "import torch; from pathlib import Path; import sys; models_dir = Path('app/models'); pth_path = models_dir / 'ms1mv3_arcface_r100_fp16.pth'; if pth_path.exists(): try: from app.pipelines.arcface_model import get_model; model = get_model(input_size=[112, 112], num_layers=100, mode='ir'); ckpt = torch.load(str(pth_path), map_location='cpu'); state_dict = ckpt if isinstance(ckpt, dict) and not ('state_dict' in ckpt or 'model' in ckpt) else (ckpt.get('state_dict', ckpt.get('model', ckpt))); model.load_state_dict(state_dict, strict=False); model.eval(); test_input = torch.randn(1, 3, 112, 112); with torch.no_grad(): test_output = model(test_input); if test_output.shape[-1] == 512: print(f'[OK] PyTorch model: Valid (output dim: 512)'); else: print(f'[WARN] PyTorch model: Invalid output dim {test_output.shape[-1]} (expected 512)'); except Exception as e: err_msg = str(e)[:80]; print(f'[WARN] PyTorch model: Error - {err_msg}'); print('[INFO] System will automatically use DeepFace fallback for embedding extraction'); sys.exit(0)" 2>nul
-    if errorlevel 0 (
-        echo [OK] PyTorch model verification complete
-    )
+    echo.
+    echo [ERROR] Model verification failed. Check the message above and MODEL_WEIGHTS_PATH.
+    pause
+    exit /b 1
 )
 
 REM Step 6: Run server
