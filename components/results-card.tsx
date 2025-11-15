@@ -130,8 +130,8 @@ export function ResultsCard({ verifyResult, verifyHistory = [] }: ResultsCardPro
             status: result.matched_id ? "success" : "warning",
             details: result.score !== null && result.score !== undefined
               ? (result.matched_id
-                  ? `Matched: ${result.matched_name || result.matched_id} (ID: ${result.matched_id}) - ${result.metric === "cosine" ? (result.score * 100).toFixed(2) + "%" : result.score.toFixed(4)}`
-                  : `Best score: ${result.metric === "cosine" ? (result.score * 100).toFixed(2) + "%" : result.score.toFixed(4)} (insufficient consensus - Hybrid mode requires 60% of angles to pass)`)
+                  ? `Matched: ${result.matched_name || result.matched_id} (ID: ${result.matched_id}) - ${result.metric === "cosine" ? (result.score * 100).toFixed(2) + "%" : result.score.toFixed(4)} (Max aggregation)`
+                  : `Best score: ${result.metric === "cosine" ? (result.score * 100).toFixed(2) + "%" : result.score.toFixed(4)} (below threshold - Max aggregation selected best embedding match)`)
               : "No scores calculated",
             duration: "~50ms",
             verificationIndex: idx + 1
@@ -348,13 +348,13 @@ export function ResultsCard({ verifyResult, verifyHistory = [] }: ResultsCardPro
                           <TooltipContent className="max-w-xs">
                             <p className="font-medium">Why did verification fail?</p>
                             <p className="text-xs mt-1">
-                              Using <span className="font-semibold">Delta-Margin</span>: Checks if top 2 scores have sufficient gap.
+                              Using <span className="font-semibold">Max Score</span> aggregation: Takes the best match across all stored face embeddings.
                             </p>
                             <p className="text-xs mt-1">
-                              <span className="text-yellow-400">⚠️</span> Score shown ({matchScore.toFixed(1)}%) is below the required threshold (55.0%) to confirm identity.
+                              <span className="text-yellow-400">⚠️</span> Best score ({matchScore.toFixed(1)}%) is below the required threshold ({threshold.toFixed(1)}%) to confirm identity.
                             </p>
                             <p className="text-xs mt-1 text-foreground/70">
-                              This prevents false matches between similar faces (e.g., siblings) by requiring a clear winner.
+                              This ensures only confident matches are accepted, preventing false positives.
                             </p>
                           </TooltipContent>
                         </Tooltip>
@@ -441,16 +441,15 @@ export function ResultsCard({ verifyResult, verifyHistory = [] }: ResultsCardPro
                     <TooltipTrigger asChild>
                       <Badge variant="secondary" className="gap-1.5 rounded-lg cursor-help">
                         <TrendingUp className="h-3.5 w-3.5 stroke-[1.5]" />
-                        Delta-Margin
+                        Max Score
                       </Badge>
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p className="font-medium">Delta-Margin Anti-Sibling Verification</p>
+                      <p className="font-medium">Max Aggregation Method</p>
                       <ul className="text-xs mt-1 list-disc list-inside space-y-0.5">
-                        <li>Requires clear winner: gap between 1st & 2nd score &gt; 0.20</li>
-                        <li>If scores too close → potential sibling → penalize</li>
-                        <li>Best method for preventing family false positives</li>
-                        <li>Used in face recognition competitions (SOTA)</li>
+                        <li>Selects best matching angle from multiple embeddings</li>
+                        <li>Fast and simple - optimized for multi-pose registration</li>
+                        <li>Takes highest similarity score across all stored embeddings</li>
                       </ul>
                     </TooltipContent>
                   </Tooltip>

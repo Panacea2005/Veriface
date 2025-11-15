@@ -13,7 +13,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { motion, AnimatePresence } from "framer-motion"
-import { registerFaceBatch } from "@/lib/api"
+import { registerFaceBatch, checkNameExists } from "@/lib/api"
 import { useToast } from "@/hooks/use-toast"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
@@ -78,10 +78,14 @@ export function RegisterWebcamDialog({ open, onOpenChange }: RegisterWebcamDialo
   const [isProcessing, setIsProcessing] = useState(false)
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null)
   const [videoReady, setVideoReady] = useState(false)
+  const [autoCapture, setAutoCapture] = useState(false)
+  const [nameError, setNameError] = useState<string | null>(null)
+  const [isCheckingName, setIsCheckingName] = useState(false)
   
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const streamRef = useRef<MediaStream | null>(null)
+  const lastCaptureTimeRef = useRef<number>(0)
   
   const { toast } = useToast()
 
@@ -176,6 +180,7 @@ export function RegisterWebcamDialog({ open, onOpenChange }: RegisterWebcamDialo
 
     setIsCapturing(true)
     setIsProcessing(true)
+    lastCaptureTimeRef.current = Date.now() // Update last capture time
     
     try {
       const imageData = await captureImage()
@@ -216,6 +221,39 @@ export function RegisterWebcamDialog({ open, onOpenChange }: RegisterWebcamDialo
     }
   }, [currentStep, steps.length, captureImage, toast, isCapturing, isProcessing])
 
+  // Auto-capture logic using simple timer
+  useEffect(() => {
+    if (!autoCapture || !open || !videoReady) return
+    
+    const checkAndCapture = () => {
+      // Don't auto-capture if current step is already completed
+      if (steps[currentStep].completed) return
+      
+      // Don't trigger if already capturing/processing
+      if (isCapturing || isProcessing) return
+      
+      // Check if enough time has passed since last capture
+      const now = Date.now()
+      const timeSinceLastCapture = now - lastCaptureTimeRef.current
+      
+      // For first capture, wait 2 seconds. For subsequent, wait 3 seconds (allows time to move to next angle)
+      const minWaitTime = lastCaptureTimeRef.current === 0 ? 2000 : 3000
+      
+      if (timeSinceLastCapture >= minWaitTime) {
+        // Trigger auto-capture
+        console.log(`[Auto-capture] Triggering for ${steps[currentStep].label}`)
+        handleCapture()
+      }
+    }
+    
+    // Check every 500ms
+    const interval = setInterval(checkAndCapture, 500)
+    
+    return () => {
+      clearInterval(interval)
+    }
+  }, [autoCapture, open, videoReady, currentStep, isCapturing, isProcessing, steps, handleCapture])
+
   useEffect(() => {
     if (open) {
       startWebcam()
@@ -228,6 +266,10 @@ export function RegisterWebcamDialog({ open, onOpenChange }: RegisterWebcamDialo
       setIsCapturing(false)
       setIsProcessing(false)
       setVideoReady(false)
+      setAutoCapture(false)
+      setNameError(null)
+      setIsCheckingName(false)
+      lastCaptureTimeRef.current = 0
     }
     
     return () => {
@@ -246,11 +288,32 @@ export function RegisterWebcamDialog({ open, onOpenChange }: RegisterWebcamDialo
   const handleSubmit = async () => {
     if (!name.trim()) {
       toast({
-        title: "Missing name",
-        description: "Please enter a name",
+        title: "Name required",
+        description: "Please enter your name",
         variant: "destructive",
       })
       return
+    }
+
+    // Check if name already exists
+    setIsCheckingName(true)
+    try {
+      const nameExists = await checkNameExists(name.trim())
+      if (nameExists) {
+        setNameError("This name is already registered. Please use a different name.")
+        toast({
+          title: "Name already exists",
+          description: "This name is already registered. Please choose a different name.",
+          variant: "destructive",
+        })
+        return
+      }
+      setNameError(null)
+    } catch (error) {
+      console.error("[Submit] Name check error:", error)
+      // Continue with registration if check fails
+    } finally {
+      setIsCheckingName(false)
     }
 
     const completedSteps = steps.filter(s => s.completed && s.image)
@@ -311,35 +374,43 @@ export function RegisterWebcamDialog({ open, onOpenChange }: RegisterWebcamDialo
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[98vw] max-w-[98vw] md:max-w-[98vw] lg:max-w-[98vw] xl:max-w-[98vw] p-0 overflow-hidden max-h-[90vh] flex flex-col">
-      <DialogHeader className="px-4 pt-4 pb-3 flex-shrink-0">
+      <DialogContent className="w-[98vw] max-w-[98vw] md:max-w-[98vw] lg:max-w-[98vw] xl:max-w-[98vw] p-0 overflow-hidden max-h-[98vh] flex flex-col">
+      <DialogHeader className="px-4 pt-2 pb-1.5 flex-shrink-0">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <DialogTitle className="text-lg">Register Face - Multi-Angle Capture</DialogTitle>
-              <DialogDescription className="text-xs">
-                Capture your face from multiple angles for better accuracy (like Face ID)
+              <DialogTitle className="text-base">Register Face - Multi-Angle Capture</DialogTitle>
+              <DialogDescription className="text-[11px]">
+                Capture your face from multiple angles for better accuracy
               </DialogDescription>
             </div>
             {/* Model selection removed; always using Model A */}
           </div>
         </DialogHeader>
         
-        <div className="flex-1 overflow-hidden px-4 pb-4 flex flex-col min-h-0">
+        <div className="flex-1 overflow-hidden px-4 pb-3 flex flex-col min-h-0">
           {/* Name Input and Progress - Compact layout */}
-          <div className="flex justify-end mb-2 flex-shrink-0">
+          <div className="flex justify-end mb-1.5 flex-shrink-0">
             <div className="w-full md:w-auto md:min-w-[240px] space-y-1.5">
-              <div className="flex items-center gap-2">
-                <Label htmlFor="name" className="text-xs font-medium whitespace-nowrap">
-                  Name:
-                </Label>
-                <Input
-                  id="name"
-                  placeholder="Enter name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="rounded-lg border-border h-8 text-sm flex-1"
-                  disabled={isSubmitting}
-                />
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="name" className="text-xs font-medium whitespace-nowrap">
+                    Name:
+                  </Label>
+                  <Input
+                    id="name"
+                    placeholder="Enter name"
+                    value={name}
+                    onChange={(e) => {
+                      setName(e.target.value)
+                      setNameError(null) // Clear error when user types
+                    }}
+                    className={`rounded-lg border-border h-8 text-sm flex-1 ${nameError ? 'border-red-500' : ''}`}
+                    disabled={isSubmitting || isCheckingName}
+                  />
+                </div>
+                {nameError && (
+                  <p className="text-xs text-red-500 pl-12">{nameError}</p>
+                )}
               </div>
               <div className="flex items-center gap-2">
                 <Label className="text-xs font-medium whitespace-nowrap">Progress:</Label>
@@ -356,8 +427,8 @@ export function RegisterWebcamDialog({ open, onOpenChange }: RegisterWebcamDialo
           {/* Main Capture Area */}
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-3 flex-1 min-h-0">
             {/* Webcam Preview - Left */}
-            <div className="lg:col-span-3 flex items-start justify-center min-h-0 pt-2">
-              <div className="relative aspect-square rounded-lg border-2 border-border bg-black overflow-hidden w-full max-w-md">
+            <div className="lg:col-span-3 flex items-start justify-center min-h-0">
+              <div className="relative aspect-square rounded-lg border-2 border-border bg-black overflow-hidden w-full max-w-[480px]">
                 <video
                   ref={videoRef}
                   autoPlay
@@ -372,7 +443,7 @@ export function RegisterWebcamDialog({ open, onOpenChange }: RegisterWebcamDialo
                 />
 
                 {/* Current Step Overlay - Small at top right */}
-                <div className="absolute top-3 right-3 pointer-events-none z-10">
+                <div className="absolute top-2 right-2 pointer-events-none z-10">
                   <motion.div
                     className="bg-background/95 backdrop-blur-sm rounded-lg px-3 py-2 border border-border shadow-lg"
                     initial={{ opacity: 0, scale: 0.9 }}
@@ -391,18 +462,42 @@ export function RegisterWebcamDialog({ open, onOpenChange }: RegisterWebcamDialo
                   </motion.div>
                 </div>
 
+                {/* Auto-capture Toggle - Top Left */}
+                <div className="absolute top-2 left-2 z-10">
+                  <motion.div
+                    className="bg-background/95 backdrop-blur-sm rounded-lg px-3 py-2 border border-border shadow-lg"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                  >
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={autoCapture}
+                        onChange={(e) => setAutoCapture(e.target.checked)}
+                        className="w-4 h-4 rounded border-border accent-accent"
+                      />
+                      <span className="text-xs font-medium">Auto-capture</span>
+                    </label>
+                  </motion.div>
+                </div>
+
                 {/* Capture Button - Bottom Center */}
-                <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 z-10">
+                <div className="absolute bottom-3 left-1/2 transform -translate-x-1/2 z-10">
                   <Button
                     onClick={handleCapture}
                     size="lg"
                     className="gap-2 shadow-lg"
-                    disabled={!videoReady || isCapturing || isProcessing || steps[currentStep].completed}
+                    disabled={!videoReady || isCapturing || isProcessing || steps[currentStep].completed || autoCapture}
                   >
                     {isCapturing || isProcessing ? (
                       <>
                         <div className="animate-spin rounded-full h-5 w-5 border-2 border-current border-t-transparent" />
-                        Capturing...
+                        {autoCapture ? "Auto-capturing..." : "Capturing..."}
+                      </>
+                    ) : autoCapture ? (
+                      <>
+                        <Camera className="h-5 w-5" />
+                        Auto Mode Active
                       </>
                     ) : (
                       <>
@@ -440,20 +535,21 @@ export function RegisterWebcamDialog({ open, onOpenChange }: RegisterWebcamDialo
                   const stackIndex = index // 0 = top (front), 4 = bottom
                   // Each image shifts down and to the right, overlapping bottom-right corner
                   // All images start from top-left corner
-                  const baseTranslateY = stackIndex * 40 // 0px, 40px, 80px, 120px, 160px
-                  const baseTranslateX = stackIndex * 40 // 0px, 40px, 80px, 120px, 160px
+                  const baseTranslateY = stackIndex * 50 // 0px, 50px, 100px, 150px, 200px
+                  const baseTranslateX = stackIndex * 80 // 0px, 80px, 160px, 240px, 320px (wider spacing on x-axis)
                   const translateY = baseTranslateY
                   const translateX = baseTranslateX
-                  const zIndex = totalSteps - stackIndex // Front has highest z-index (5), last has lowest (1)
+                  // Fix z-index: Front (index 0) should have HIGHEST z-index
+                  const zIndex = totalSteps + 10 - stackIndex // Front: 15, Last: 11 (higher = on top)
                   
                   return (
                     <motion.div
                       key={step.angle}
                       className={`absolute top-0 left-0 aspect-square rounded-md border-2 overflow-hidden cursor-pointer ${
                         step.completed
-                          ? "border-accent bg-accent/10"
+                          ? "border-accent bg-background"
                           : index === currentStep
-                          ? "border-primary bg-primary/10"
+                          ? "border-primary bg-background"
                           : "border-border bg-muted"
                       }`}
                       style={{
@@ -467,8 +563,8 @@ export function RegisterWebcamDialog({ open, onOpenChange }: RegisterWebcamDialo
                       animate={{ 
                         opacity: 1, 
                         scale: 1,
-                        y: hoveredIndex === index ? translateY - 20 : translateY,
-                        x: hoveredIndex === index ? translateX - 40 : translateX,
+                        y: hoveredIndex === index ? translateY - 30 : translateY,
+                        x: hoveredIndex === index ? translateX - 60 : translateX,
                       }}
                       onHoverStart={() => setHoveredIndex(index)}
                       onHoverEnd={() => setHoveredIndex(null)}
@@ -537,13 +633,13 @@ export function RegisterWebcamDialog({ open, onOpenChange }: RegisterWebcamDialo
           </Button>
           <Button
             onClick={handleSubmit}
-            disabled={!name.trim() || completedCount === 0 || isSubmitting}
+            disabled={!name.trim() || completedCount === 0 || isSubmitting || isCheckingName || !!nameError}
             className="flex-1"
           >
-            {isSubmitting ? (
+            {isSubmitting || isCheckingName ? (
               <>
                 <div className="animate-spin rounded-full h-4 w-4 border-2 border-current border-t-transparent mr-2" />
-                Registering...
+                {isCheckingName ? "Checking name..." : "Registering..."}
               </>
             ) : (
               `Register ${completedCount} Angle${completedCount !== 1 ? 's' : ''}`

@@ -31,6 +31,11 @@ async def analyze_emotion(image: UploadFile = File(...)):
             "label": result.get("label", "neutral"),
             "confidence": float(result.get("confidence", 0.0)),
             "probs": result.get("probs", {}),
+            "age": result.get("age", 0),
+            "gender": result.get("gender", "Unknown"),
+            "gender_confidence": float(result.get("gender_confidence", 0.0)),
+            "race": result.get("race", "Unknown"),
+            "race_confidence": float(result.get("race_confidence", 0.0)),
         }
     except HTTPException:
         raise

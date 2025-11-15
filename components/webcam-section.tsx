@@ -6,9 +6,9 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { RegisterDrawer } from "@/components/register-drawer"
 import { motion } from "framer-motion"
-import { verifyFace, checkHealth, analyzeEmotion } from "@/lib/api"
+import { verifyFace, checkHealth, analyzeEmotion, checkLivenessRealtime } from "@/lib/api"
 import { useToast } from "@/hooks/use-toast"
-import type { VerifyResponse, HealthResponse } from "@/lib/api"
+import type { VerifyResponse, HealthResponse, LivenessResponse } from "@/lib/api"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import RegistryDialog from "@/components/registry-dialog"
 import {
@@ -48,8 +48,10 @@ export function WebcamSection({ onVerifyResult }: WebcamSectionProps) {
   
   const { toast } = useToast()
   const [registryOpen, setRegistryOpen] = useState(false)
-  const [liveEmotion, setLiveEmotion] = useState<{ label: string; probs: Record<string, number> } | null>(null)
+  const [liveEmotion, setLiveEmotion] = useState<{ label: string; probs: Record<string, number>; age?: number; gender?: string; race?: string } | null>(null)
   const emotionTickRef = useRef<boolean>(false)
+  const [liveLiveness, setLiveLiveness] = useState<LivenessResponse | null>(null)
+  const livenessTickRef = useRef<boolean>(false)
   const [lastVerify, setLastVerify] = useState<VerifyResponse | null>(null)
   const [spoofDialogOpen, setSpoofDialogOpen] = useState(false)
   const [spoofMessage, setSpoofMessage] = useState<string>("")
@@ -173,7 +175,13 @@ export function WebcamSection({ onVerifyResult }: WebcamSectionProps) {
           if (!blob) return
           const file = new File([blob], "frame.jpg", { type: "image/jpeg" })
           const emo = await analyzeEmotion(file)
-          const payload = { label: emo.label, probs: emo.probs || {} }
+          const payload = { 
+            label: emo.label, 
+            probs: emo.probs || {},
+            age: emo.age,
+            gender: emo.gender,
+            race: emo.race
+          }
           setLiveEmotion(payload)
           try {
             window.dispatchEvent(new CustomEvent('live-emotion', { detail: payload }))
@@ -185,6 +193,59 @@ export function WebcamSection({ onVerifyResult }: WebcamSectionProps) {
         }
       }, "image/jpeg", 0.9)
     }, 800) // ~1.25 fps to balance load; adjust as needed
+    return () => clearInterval(interval)
+  }, [mode])
+
+  // Realtime liveness loop (webcam only) - runs in parallel with emotion
+  useEffect(() => {
+    if (mode !== "webcam") return
+    const interval = setInterval(async () => {
+      if (livenessTickRef.current) return
+      if (!videoRef.current || !canvasRef.current) return
+      const video = videoRef.current
+      const canvas = canvasRef.current
+      if (video.readyState !== video.HAVE_ENOUGH_DATA) return
+      
+      // Create temporary canvas for liveness check
+      const tempCanvas = document.createElement('canvas')
+      tempCanvas.width = video.videoWidth
+      tempCanvas.height = video.videoHeight
+      const ctx = tempCanvas.getContext("2d")
+      if (!ctx) return
+      
+      // Flip horizontal for mirror effect
+      ctx.save()
+      ctx.translate(tempCanvas.width, 0)
+      ctx.scale(-1, 1)
+      ctx.drawImage(video, 0, 0)
+      ctx.restore()
+      
+      livenessTickRef.current = true
+      tempCanvas.toBlob(async (blob) => {
+        try {
+          if (!blob) return
+          const file = new File([blob], "frame.jpg", { type: "image/jpeg" })
+          const liveness = await checkLivenessRealtime(file)
+          setLiveLiveness(liveness)
+          
+          // Show spoof dialog if spoof detected with high confidence
+          if (!liveness.passed && liveness.score > 0.7) {
+            setSpoofMessage(`Spoof detected with ${(liveness.score * 100).toFixed(0)}% confidence. Please use a real face.`)
+            setSpoofDialogOpen(true)
+          }
+          
+          // Dispatch event for other components
+          try {
+            window.dispatchEvent(new CustomEvent('live-liveness', { detail: liveness }))
+          } catch {}
+        } catch (e) {
+          // Silently handle errors (network issues, etc.)
+          console.warn('Liveness check failed:', e)
+        } finally {
+          livenessTickRef.current = false
+        }
+      }, "image/jpeg", 0.85)
+    }, 1000) // 1 FPS for liveness (less frequent than emotion to reduce load)
     return () => clearInterval(interval)
   }, [mode])
 
@@ -523,6 +584,25 @@ export function WebcamSection({ onVerifyResult }: WebcamSectionProps) {
                         )
                       })()
                     )}
+                    {/* Real-time Liveness indicator */}
+                    {liveLiveness && (
+                      <div className="absolute top-2 right-2 z-10 rounded-full bg-background/85 backdrop-blur px-3 py-1.5 border border-border text-xs font-semibold flex items-center gap-2">
+                        <ShieldAlert className={`h-3.5 w-3.5 ${
+                          liveLiveness.passed 
+                            ? "text-green-600 dark:text-green-400" 
+                            : "text-red-600 dark:text-red-400"
+                        }`} />
+                        <span className={liveLiveness.passed 
+                          ? "text-green-600 dark:text-green-400" 
+                          : "text-red-600 dark:text-red-400"
+                        }>
+                          {liveLiveness.passed 
+                            ? `✓ Real ${(liveLiveness.score * 100).toFixed(0)}%` 
+                            : `✗ Spoof ${(liveLiveness.score * 100).toFixed(0)}%`
+                          }
+                        </span>
+                      </div>
+                    )}
                     <video
                       ref={videoRef}
                       autoPlay
@@ -676,7 +756,7 @@ export function WebcamSection({ onVerifyResult }: WebcamSectionProps) {
                       const [k, v] = Object.entries(liveEmotion.probs).sort((a,b)=>b[1]-a[1])[0]
                       const em = k === "happy" ? "😊" : k === "sad" ? "😢" : k === "angry" ? "😠" : k === "surprise" ? "😲" : k === "fear" ? "😨" : k === "disgust" ? "🤢" : "😐"
                       return (
-                        <div className="mt-4 pt-4 border-t border-border">
+                        <div className="mt-4 pt-4 border-t border-border space-y-3">
                           <div className="rounded-lg bg-background border border-border p-3 flex items-center justify-between">
                             <div className="flex items-center gap-3">
                               <span className="text-3xl leading-none">{em}</span>
@@ -689,6 +769,29 @@ export function WebcamSection({ onVerifyResult }: WebcamSectionProps) {
                               <div className="text-2xl font-bold text-accent">{(v * 100).toFixed(0)}%</div>
                               <div className="text-[10px] text-foreground/70 uppercase">Confidence</div>
                             </div>
+                          </div>
+                          {/* Age, Gender, Race Info */}
+                          <div className="grid grid-cols-3 gap-2">
+                            {liveEmotion.age && liveEmotion.age > 0 && (
+                              <div className="rounded-lg border border-border bg-background/80 px-3 py-2">
+                                <span className="text-[10px] uppercase tracking-wide text-foreground/60 block">Age</span>
+                                <span className="block text-sm font-semibold text-foreground">{liveEmotion.age}y</span>
+                              </div>
+                            )}
+                            {liveEmotion.gender && (
+                              <div className="rounded-lg border border-border bg-background/80 px-3 py-2">
+                                <span className="text-[10px] uppercase tracking-wide text-foreground/60 block">Gender</span>
+                                <span className="block text-sm font-semibold text-foreground capitalize">
+                                  {liveEmotion.gender === "Man" ? "♂ Man" : liveEmotion.gender === "Woman" ? "♀ Woman" : liveEmotion.gender}
+                                </span>
+                              </div>
+                            )}
+                            {liveEmotion.race && (
+                              <div className="rounded-lg border border-border bg-background/80 px-3 py-2">
+                                <span className="text-[10px] uppercase tracking-wide text-foreground/60 block">Race</span>
+                                <span className="block text-sm font-semibold text-foreground capitalize">{liveEmotion.race}</span>
+                              </div>
+                            )}
                           </div>
                         </div>
                       )

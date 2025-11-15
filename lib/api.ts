@@ -27,6 +27,20 @@ export interface EmotionResponse {
   label: string
   confidence: number
   probs: Record<string, number>
+  age?: number
+  gender?: string
+  gender_confidence?: number
+  race?: string
+  race_confidence?: number
+}
+
+export interface LivenessResponse {
+  score: number
+  passed: boolean
+  is_real: boolean
+  processing_time_ms: number
+  status: "success" | "error"
+  message: string
 }
 
 export interface RegisterResponse {
@@ -186,6 +200,37 @@ export async function analyzeEmotion(image: File | Blob): Promise<EmotionRespons
     throw new Error(error.detail || "Emotion analysis failed")
   }
   return response.json()
+}
+
+/**
+ * Real-time liveness check (optimized for streaming)
+ */
+export async function checkLivenessRealtime(image: File | Blob): Promise<LivenessResponse> {
+  const formData = new FormData()
+  formData.append("image", image)
+  
+  const response = await fetch(`${API_BASE_URL}/api/liveness/realtime`, { 
+    method: "POST", 
+    body: formData 
+  })
+  
+  // Always return JSON (endpoint never throws HTTP errors)
+  const result = await response.json()
+  return result as LivenessResponse
+}
+
+/**
+ * Check if a name already exists in the registry
+ */
+export async function checkNameExists(name: string): Promise<boolean> {
+  try {
+    const registry = await fetchRegistry({ includeVectors: false, project: "none", limitPerUser: 1 })
+    const existingNames = Object.values(registry.names).map(n => n.toLowerCase().trim())
+    return existingNames.includes(name.toLowerCase().trim())
+  } catch (error) {
+    console.error("[API] Failed to check name existence:", error)
+    return false // If check fails, allow registration to proceed
+  }
 }
 
 /**

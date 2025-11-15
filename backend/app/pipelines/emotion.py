@@ -18,7 +18,7 @@ class EmotionModel:
         self.use_deepface = False
     
     def predict(self, img: np.ndarray) -> Dict[str, any]:
-        """Returns {label: str, confidence: float, probs: Dict[str, float]}"""
+        """Returns {label: str, confidence: float, probs: Dict[str, float], age: int, gender: str, race: str}"""
         # Ensure DeepFace imports even if tensorflow lacks __version__ attribute
         try:
             import tensorflow as tf  # type: ignore
@@ -32,9 +32,10 @@ class EmotionModel:
         rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB) if len(img.shape) == 3 else img
         result = DeepFace.analyze(
             img_path=rgb,
-            actions=["emotion"],
+            actions=["emotion", "age", "gender", "race"],
             enforce_detection=False,
-            detector_backend="opencv"
+            detector_backend="opencv",
+            silent=True  # Disable progress bars
         )
         if isinstance(result, list) and len(result) > 0:
             result = result[0]
@@ -51,5 +52,22 @@ class EmotionModel:
         # Dominant emotion from normalized probabilities
         label = str(result.get("dominant_emotion", max(norm_probs, key=norm_probs.get) if norm_probs else "neutral"))
         confidence = float(norm_probs.get(label, 0.0))
-        return {"label": label, "confidence": confidence, "probs": norm_probs}
+        
+        # Extract age, gender, race
+        age = int(result.get("age", 0))
+        gender_data = result.get("gender", {})
+        gender = str(result.get("dominant_gender", max(gender_data, key=gender_data.get) if gender_data else "Unknown"))
+        race_data = result.get("race", {})
+        race = str(result.get("dominant_race", max(race_data, key=race_data.get) if race_data else "Unknown"))
+        
+        return {
+            "label": label, 
+            "confidence": confidence, 
+            "probs": norm_probs,
+            "age": age,
+            "gender": gender,
+            "gender_confidence": float(gender_data.get(gender, 0.0)) if gender_data else 0.0,
+            "race": race,
+            "race_confidence": float(race_data.get(race, 0.0)) if race_data else 0.0
+        }
 

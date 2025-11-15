@@ -42,10 +42,10 @@ export function Header({ isDark, onToggleTheme, isBaseTheme, onToggleThemeStyle 
                 size="sm"
                 onClick={onToggleThemeStyle}
                 className={`rounded-lg px-3 h-9 gap-2 font-semibold transition-colors ${isBaseTheme ? "bg-accent text-accent-foreground border-accent/40" : "hover:bg-muted"}`}
-                aria-label="Toggle neo brutalism / base theme"
+                aria-label="Toggle neo brutalism / claude theme"
               >
                 <Palette className="h-4 w-4" />
-                {isBaseTheme ? "Base" : "Neo"}
+                {isBaseTheme ? "Claude" : "Neo"}
               </Button>
             </motion.div>
             <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>

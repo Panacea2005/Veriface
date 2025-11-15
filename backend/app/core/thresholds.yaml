@@ -1,10 +1,10 @@
 similarity:
   cosine:
-    threshold: 0.55  # Stricter for sibling discrimination (validated EER: 0.2344)
-    method: delta_margin  # Best for preventing sibling false positives
-    k: 2  # Top-K: Take top 2 out of 5 (not used for delta_margin)
-    vote_threshold: 0.6  # Hybrid: 60% of embeddings must pass
-    margin_threshold: 0.20  # Delta-Margin: min gap between 1st & 2nd (increased from 0.15)
+    threshold: 0.4  # Stricter for sibling discrimination (validated EER: 0.2344)
+    method: max  # Best for multi-pose: selects best matching angle (fastest, simplest)
+    k: 3  # Top-K: Take top 3 out of 5 embeddings (not used for max)
+    vote_threshold: 0.6  # Hybrid: 60% of embeddings must pass (not used for max)
+    margin_threshold: 0.20  # Delta-Margin: min gap between 1st & 2nd (not used for max)
   euclidean:
     threshold: 1.23
 

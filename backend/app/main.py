@@ -5,6 +5,7 @@ from app.core.config import CORS_ORIGINS
 from app.routers import health, register, verify, registry as registry_router
 from app.routers import emotion_logs
 from app.routers import emotion_rt
+from app.routers import liveness_rt
 from app.routers import attendance
 from app.routers import emotion_analytics
 import traceback
@@ -29,6 +30,7 @@ app.include_router(verify.router)
 app.include_router(registry_router.router)
 app.include_router(emotion_logs.router)
 app.include_router(emotion_rt.router)
+app.include_router(liveness_rt.router)
 app.include_router(attendance.router)
 app.include_router(emotion_analytics.router)
 

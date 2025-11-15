@@ -98,26 +98,69 @@ class EmbedModel:
                     else:
                         state_dict = checkpoint
                     
-                    # Load state dict (handle key mismatches)
+                    # Load state dict (handle key mismatches with better mapping)
+                    def map_state_dict_keys(state_dict, model_keys):
+                        """Map checkpoint keys to model keys more intelligently."""
+                        new_state_dict = {}
+                        model_keys_set = set(model_keys)
+                        
+                        for k, v in state_dict.items():
+                            # Try direct match first
+                            if k in model_keys_set:
+                                new_state_dict[k] = v
+                                continue
+                            
+                            # Remove common prefixes
+                            mapped_key = k.replace('module.', '').replace('backbone.', '').replace('model.', '')
+                            if mapped_key in model_keys_set:
+                                new_state_dict[mapped_key] = v
+                                continue
+                            
+                            # Try removing 'downsample.' prefix for some checkpoints
+                            if 'downsample' in k:
+                                alt_key = k.replace('.downsample.0.', '.downsample.0.').replace('.downsample.1.', '.downsample.1.')
+                                if alt_key in model_keys_set:
+                                    new_state_dict[alt_key] = v
+                                    continue
+                            
+                            # If still no match, keep original key (will be in unexpected_keys)
+                            new_state_dict[k] = v
+                        
+                        return new_state_dict
+                    
                     try:
+                        # Get model state dict keys
+                        model_keys = set(self.model.state_dict().keys())
+                        
+                        # Try direct load first
                         missing_keys, unexpected_keys = self.model.load_state_dict(state_dict, strict=False)
+                        
+                        # If too many missing keys, try key mapping
+                        if len(missing_keys) > 50:
+                            print(f"[INFO] Too many missing keys ({len(missing_keys)}), trying key mapping...", file=__import__('sys').stderr)
+                            mapped_state_dict = map_state_dict_keys(state_dict, model_keys)
+                            missing_keys, unexpected_keys = self.model.load_state_dict(mapped_state_dict, strict=False)
+                        
                         if missing_keys:
                             print(f"[WARNING] Missing keys when loading checkpoint: {len(missing_keys)} keys", file=__import__('sys').stderr)
-                            print(f"[WARNING] First 10 missing keys: {missing_keys[:10]}", file=__import__('sys').stderr)
+                            if len(missing_keys) <= 20:
+                                print(f"[WARNING] Missing keys: {missing_keys}", file=__import__('sys').stderr)
+                            else:
+                                print(f"[WARNING] First 10 missing keys: {missing_keys[:10]}", file=__import__('sys').stderr)
                         if unexpected_keys:
                             print(f"[WARNING] Unexpected keys in checkpoint: {len(unexpected_keys)} keys", file=__import__('sys').stderr)
-                            print(f"[WARNING] First 10 unexpected keys: {unexpected_keys[:10]}", file=__import__('sys').stderr)
+                            if len(unexpected_keys) <= 20:
+                                print(f"[WARNING] Unexpected keys: {unexpected_keys}", file=__import__('sys').stderr)
+                            else:
+                                print(f"[WARNING] First 10 unexpected keys: {unexpected_keys[:10]}", file=__import__('sys').stderr)
                         if not missing_keys and not unexpected_keys:
                             print(f"[INFO] All checkpoint keys matched successfully!", file=__import__('sys').stderr)
                     except Exception as e:
-                        print(f"[WARNING] Strict loading failed: {e}. Trying with key mapping...", file=__import__('sys').stderr)
+                        print(f"[WARNING] State dict loading failed: {e}. Trying with key mapping...", file=__import__('sys').stderr)
                         # Try to map keys if needed
-                        new_state_dict = {}
-                        for k, v in state_dict.items():
-                            # Remove 'module.' prefix if present
-                            new_key = k.replace('module.', '')
-                            new_state_dict[new_key] = v
-                        missing_keys, unexpected_keys = self.model.load_state_dict(new_state_dict, strict=False)
+                        model_keys = set(self.model.state_dict().keys())
+                        mapped_state_dict = map_state_dict_keys(state_dict, model_keys)
+                        missing_keys, unexpected_keys = self.model.load_state_dict(mapped_state_dict, strict=False)
                         if missing_keys:
                             print(f"[WARNING] Missing keys after key mapping: {len(missing_keys)} keys", file=__import__('sys').stderr)
                             print(f"[WARNING] First 10 missing keys: {missing_keys[:10]}", file=__import__('sys').stderr)
@@ -218,11 +261,24 @@ class EmbedModel:
                 img_max = np.max(img_rgb)
                 print(f"[DEBUG] Preprocessing: image shape={img_rgb.shape}, mean={img_mean:.2f}, std={img_std:.2f}, min={img_min:.0f}, max={img_max:.0f}", file=__import__('sys').stderr)
                 
-                # CRITICAL: Use EXACT same normalization as training notebook
-                # Training uses: (pixel*255 - 127.5) / 128.0 where pixel is in [0,1] from ToTensor()
-                # This is equivalent to: (pixel - 127.5) / 128.0 where pixel is in [0,255]
-                # Result: [-1, 1] range (slightly different from standard [-1,1] which uses /127.5)
-                img_normalized = (img_rgb.astype(np.float32) - 127.5) / 128.0
+                # CRITICAL: Use EXACT same normalization as training
+                # Try multiple normalization methods based on env var
+                norm_method = os.environ.get("PREPROCESS_NORM", "standard")
+                if norm_method == "insightface":
+                    # InsightFace standard: (pixel - 127.5) / 128.0
+                    img_normalized = (img_rgb.astype(np.float32) - 127.5) / 128.0
+                elif norm_method == "imagenet":
+                    # ImageNet standard: (pixel / 255.0 - mean) / std
+                    mean = np.array([0.485, 0.456, 0.406], dtype=np.float32).reshape(1, 1, 3)
+                    std = np.array([0.229, 0.224, 0.225], dtype=np.float32).reshape(1, 1, 3)
+                    img_normalized = (img_rgb.astype(np.float32) / 255.0 - mean) / std
+                elif norm_method == "arcface_standard":
+                    # ArcFace common: (pixel / 255.0 - 0.5) / 0.5 = (pixel - 127.5) / 127.5
+                    img_normalized = (img_rgb.astype(np.float32) - 127.5) / 127.5
+                else:  # "standard" default
+                    # Standard ArcFace: normalize to [-1, 1] using /127.5
+                    img_normalized = (img_rgb.astype(np.float32) - 127.5) / 127.5
+                
                 img_chw = np.transpose(img_normalized, (2, 0, 1))  # HWC -> CHW
                 img_tensor = torch.from_numpy(img_chw).unsqueeze(0).to(self.device)  # Add batch dimension
                 
@@ -233,18 +289,27 @@ class EmbedModel:
                 tensor_max = torch.max(img_tensor).item()
                 print(f"[DEBUG] Preprocessing: tensor mean={tensor_mean:.6f}, std={tensor_std:.6f}, min={tensor_min:.6f}, max={tensor_max:.6f}", file=__import__('sys').stderr)
                 
-                # Inference - default to eval (dropout disabled)
+                # CRITICAL: Ensure model is in eval mode (dropout disabled, BN uses running stats)
                 self.model.eval()
                 with torch.no_grad():
                     # Optional: use batch stats for BatchNorm to avoid reliance on missing running stats
-                    if os.environ.get("USE_BN_BATCH_STATS", "0") == "1":
+                    # This can help if checkpoint has bad BN stats, but may reduce consistency
+                    use_bn_batch_stats = os.environ.get("USE_BN_BATCH_STATS", "0") == "1"
+                    if use_bn_batch_stats:
+                        # Temporarily enable training mode for BN only (to use batch stats)
                         for m in self.model.modules():
                             if isinstance(m, torch.nn.BatchNorm2d) or isinstance(m, torch.nn.BatchNorm1d):
                                 m.train(True)
+                            # Keep dropout disabled even when using batch stats
                             elif isinstance(m, torch.nn.Dropout) or isinstance(m, torch.nn.Dropout2d):
                                 m.eval()
+                    
                     embedding = self.model(img_tensor)
                     embedding = embedding.cpu().numpy().flatten()
+                    
+                    # Restore eval mode if we temporarily changed BN
+                    if use_bn_batch_stats:
+                        self.model.eval()
                 
                 # Debug: Check raw embedding before normalization
                 raw_norm = np.linalg.norm(embedding)

@@ -140,13 +140,41 @@ class Backbone(nn.Module):
         # AdaptiveAvgPool2d to ensure 7x7 output regardless of input size
         x = F.adaptive_avg_pool2d(x, (7, 7))
         x = x.view(x.size(0), -1)  # Flatten
-        x = self.dropout(x)  # Move dropout after flatten, before fc (common in ArcFace)
+        # CRITICAL: Dropout must be disabled in eval mode for consistent embeddings
+        # Only apply dropout if model is in training mode
+        if self.training:
+            x = self.dropout(x)
         x = self.fc(x)
         x = self.features(x)
+        # NOTE: DO NOT add F.normalize here!
+        # Checkpoints trained with NormalizedBackbone wrapper have it as separate layer
+        return x
+
+class NormalizedBackbone(nn.Module):
+    """
+    Wrapper that adds L2 normalization to backbone's forward pass.
+    
+    This matches the training setup where backbone is wrapped with this layer.
+    Checkpoints saved from notebooks include this wrapper in state_dict.
+    """
+    def __init__(self, backbone):
+        super().__init__()
+        self.backbone = backbone
+    
+    def forward(self, x):
+        x = self.backbone(x)
+        # CRITICAL: L2 normalize embeddings (project onto unit sphere)
+        # This is essential for cosine similarity to work correctly
+        x = F.normalize(x, p=2, dim=1)
         return x
 
 def get_model(input_size=[112, 112], num_layers=100, mode='ir'):
-    """Get ArcFace ResNet model."""
-    model = Backbone(input_size, num_layers, mode)
+    """
+    Get ArcFace ResNet model with L2 normalization.
+    
+    Returns NormalizedBackbone wrapper to match training setup.
+    """
+    backbone = Backbone(input_size, num_layers, mode)
+    model = NormalizedBackbone(backbone)
     return model
 

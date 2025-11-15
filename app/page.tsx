@@ -32,11 +32,11 @@ export default function Page() {
       root.classList.remove("dark")
     }
 
-    if (savedStyle === "base") {
+    if (savedStyle === "claude") {
       setIsBaseTheme(true)
-      root.classList.add("theme-base")
+      root.classList.add("theme-claude")
     } else {
-      root.classList.remove("theme-base")
+      root.classList.remove("theme-claude")
     }
   }, [])
 
@@ -55,12 +55,12 @@ export default function Page() {
   const toggleThemeStyle = () => {
     const next = !isBaseTheme
     setIsBaseTheme(next)
-    localStorage.setItem("theme-style", next ? "base" : "neo")
+    localStorage.setItem("theme-style", next ? "claude" : "neo")
     const root = document.documentElement
     if (next) {
-      root.classList.add("theme-base")
+      root.classList.add("theme-claude")
     } else {
-      root.classList.remove("theme-base")
+      root.classList.remove("theme-claude")
     }
   }
 
@@ -74,7 +74,7 @@ export default function Page() {
   if (!mounted) return null
 
   return (
-    <div className={`${isDark ? "dark" : ""} ${isBaseTheme ? "theme-base" : ""}`}>
+    <div className={`${isDark ? "dark" : ""} ${isBaseTheme ? "theme-claude" : ""}`}>
       <div className="min-h-screen flex flex-col bg-background text-foreground transition-colors duration-200">
         {/* Header */}
         <Header

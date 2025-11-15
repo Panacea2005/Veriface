@@ -60,11 +60,18 @@ class LivenessModel:
     def _init_deepface(self):
         """Initialize DeepFace with optimal configuration."""
         try:
+            # Pre-import DeepFace to warm up models
+            from deepface import DeepFace
+            
             # Configure DeepFace for optimal performance
             # Default to lightweight OpenCV detector backend
             self.backend = "opencv"
             self.model_loaded = True
-            logger.info("DeepFace initialized with backend=opencv")
+            
+            # Cache flag for first-time model download
+            self._models_warmed = False
+            
+            logger.info("DeepFace initialized with backend=opencv (real-time optimized)")
         except Exception as e:
             logger.error(f"Failed to initialize DeepFace: {e}")
             self.model_loaded = False
@@ -128,18 +135,22 @@ class LivenessModel:
                 #   - Runs 2 models with different crop scales
                 #   - Averages predictions: [spoof_prob, real_prob, unknown_prob]
                 #   - is_real = (argmax == 1), i.e., real_prob is highest
-                #   - score = probability of the predicted label / 2
-                # No threshold needed - DeepFace's decision is based on argmax!
-                score = float(antispoof_score)
+                #   - antispoof_score = probability of the predicted label / 2
+                # 
+                # IMPORTANT: antispoof_score is confidence of PREDICTED class
+                # If is_real=True, score means confidence it's real
+                # If is_real=False (spoof), score means confidence it's spoof
+                # We return the raw confidence of the predicted class
+                
+                confidence = float(antispoof_score)
                 
                 logger.info(
                     f"Liveness detection (DeepFace MiniFASNet) - "
-                    f"antispoof_score: {score:.3f}, is_real: {is_real} (from argmax)"
+                    f"score: {confidence:.3f}, is_real: {is_real}"
                 )
                 
-                # Use DeepFace's built-in decision (based on argmax, not threshold)
-                # This is more accurate than arbitrary threshold
-                return score, is_real
+                # Return confidence of predicted class (not normalized)
+                return confidence, is_real
             else:
                 # No face detected
                 logger.warning("DeepFace could not detect face for anti-spoofing analysis")

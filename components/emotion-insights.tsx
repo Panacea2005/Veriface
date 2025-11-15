@@ -285,43 +285,86 @@ export function EmotionInsights() {
 
         {/* Department Sentiment Tab */}
         <TabsContent value="departments" className="space-y-4">
-          <div className="grid gap-3 md:grid-cols-3 lg:grid-cols-4">
+          <div className="grid gap-4 grid-cols-1">
             {loading ? (
               Array(4).fill(0).map((_, i) => (
-                <Skeleton key={i} className="h-[110px]" />
+                <Skeleton key={i} className="h-[200px]" />
               ))
             ) : departments.length > 0 ? (
               departments.map(dept => (
                 <Card key={dept.department} className="border-border">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium flex items-center justify-between">
-                      <span className="truncate">{dept.department}</span>
+                  <CardHeader className="pb-3">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <CardTitle className="text-xl font-bold">
+                          {dept.department}
+                        </CardTitle>
+                        <CardDescription className="text-sm mt-1">
+                          {dept.total_records} check-ins in last {selectedDays} days
+                        </CardDescription>
+                      </div>
                       <Badge 
                         variant={
                           dept.wellness_score > 60 ? "default" :
                           dept.wellness_score > 40 ? "secondary" : "destructive"
                         }
-                        className="text-[10px] px-1.5 py-0 h-5 ml-2"
+                        className="text-lg px-3 py-1 h-auto font-bold"
                       >
                         {dept.wellness_score.toFixed(0)}
                       </Badge>
-                    </CardTitle>
-                    <CardDescription className="text-[10px]">
-                      {dept.total_records} check-ins
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-1.5 pt-0">
-                    <div className="flex justify-between text-xs">
-                      <span className="text-muted-foreground">Happy</span>
-                      <span className="font-medium text-green-600">
-                        {dept.happiness_percentage.toFixed(0)}%
-                      </span>
                     </div>
-                    <div className="flex justify-between text-xs">
-                      <span className="text-muted-foreground">Stress</span>
-                      <span className="font-medium text-red-600">
-                        {dept.stress_percentage.toFixed(0)}%
-                      </span>
+                  </CardHeader>
+                  <CardContent className="space-y-4 pt-0">
+                    {/* Happiness & Stress Bars */}
+                    <div className="space-y-3">
+                      <div>
+                        <div className="flex justify-between text-sm mb-1.5">
+                          <span className="font-medium text-muted-foreground">😊 Happiness</span>
+                          <span className="font-bold text-green-600">
+                            {dept.happiness_percentage.toFixed(0)}%
+                          </span>
+                        </div>
+                        <div className="h-3 bg-muted rounded-full overflow-hidden">
+                          <div 
+                            className="h-full bg-green-500 transition-all duration-500"
+                            style={{ width: `${dept.happiness_percentage}%` }}
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <div className="flex justify-between text-sm mb-1.5">
+                          <span className="font-medium text-muted-foreground">😰 Stress</span>
+                          <span className="font-bold text-red-600">
+                            {dept.stress_percentage.toFixed(0)}%
+                          </span>
+                        </div>
+                        <div className="h-3 bg-muted rounded-full overflow-hidden">
+                          <div 
+                            className="h-full bg-red-500 transition-all duration-500"
+                            style={{ width: `${dept.stress_percentage}%` }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Emotion Distribution Mini Bar */}
+                    <div className="pt-2 border-t">
+                      <div className="text-xs text-muted-foreground mb-2 font-medium">Emotion Distribution</div>
+                      <div className="flex gap-1 h-2 rounded-full overflow-hidden">
+                        {Object.entries(dept.emotion_distribution)
+                          .sort((a, b) => b[1] - a[1])
+                          .map(([emotion, value]) => (
+                            <div
+                              key={emotion}
+                              className="transition-all"
+                              style={{
+                                width: `${value}%`,
+                                backgroundColor: EMOTION_COLORS[emotion] || '#6B7280'
+                              }}
+                              title={`${emotion}: ${value.toFixed(0)}%`}
+                            />
+                          ))}
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
@@ -341,38 +384,75 @@ export function EmotionInsights() {
           {loading ? (
             <Skeleton className="h-48 w-full" />
           ) : anomalies.length > 0 ? (
-            <div className="space-y-3">
+            <div className="grid gap-4 md:grid-cols-2">
               {anomalies.map((anomaly, idx) => (
-                <Alert key={idx} variant={anomaly.severity === "high" ? "destructive" : "default"}>
-                  <AlertTriangle className="h-4 w-4" />
-                  <AlertTitle className="flex items-center gap-2">
-                    User: {anomaly.user_id}
-                    <Badge variant={getSeverityColor(anomaly.severity)}>
-                      {anomaly.severity} severity
-                    </Badge>
-                  </AlertTitle>
-                  <AlertDescription>
-                    <p className="font-medium">
-                      {anomaly.type === "prolonged_negative" ? "Prolonged Negative Emotions" :
-                       anomaly.type === "high_anger" ? "High Anger Detected" :
-                       anomaly.type === "sudden_change" ? "Sudden Emotion Change" :
-                       "Unusual Pattern"}
-                    </p>
-                    <p className="text-sm mt-1">{anomaly.details}</p>
-                    <p className="text-xs text-muted-foreground mt-2">
-                      Last detected: {new Date(anomaly.timestamp).toLocaleString()}
-                    </p>
-                  </AlertDescription>
-                </Alert>
+                <Card key={idx} className={`border-2 ${
+                  anomaly.severity === "high" ? "border-red-500 bg-red-50 dark:bg-red-950/20" :
+                  anomaly.severity === "medium" ? "border-yellow-500 bg-yellow-50 dark:bg-yellow-950/20" :
+                  "border-blue-500 bg-blue-50 dark:bg-blue-950/20"
+                }`}>
+                  <CardHeader className="pb-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-start gap-3 flex-1">
+                        <div className={`p-2.5 rounded-full ${
+                          anomaly.severity === "high" ? "bg-red-500" :
+                          anomaly.severity === "medium" ? "bg-yellow-500" :
+                          "bg-blue-500"
+                        }`}>
+                          {anomaly.type === "prolonged_negative" ? (
+                            <Brain className="h-5 w-5 text-white" />
+                          ) : anomaly.type === "high_anger" ? (
+                            <AlertTriangle className="h-5 w-5 text-white" />
+                          ) : (
+                            <Activity className="h-5 w-5 text-white" />
+                          )}
+                        </div>
+                        <div className="flex-1">
+                          <CardTitle className="text-lg font-bold">
+                            {anomaly.type === "prolonged_negative" ? "⚠️ Prolonged Negative Emotions" :
+                             anomaly.type === "high_anger" ? "😡 High Anger Detected" :
+                             anomaly.type === "sudden_change" ? "📊 Sudden Emotion Change" :
+                             "🔍 Unusual Pattern"}
+                          </CardTitle>
+                          <CardDescription className="mt-1 text-sm font-medium">
+                            User: <span className="font-mono">{anomaly.user_id}</span>
+                          </CardDescription>
+                        </div>
+                      </div>
+                      <Badge 
+                        variant={getSeverityColor(anomaly.severity)}
+                        className="text-xs font-bold uppercase"
+                      >
+                        {anomaly.severity}
+                      </Badge>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="bg-background/80 rounded-lg p-3 border">
+                      <p className="text-sm leading-relaxed">{anomaly.details}</p>
+                    </div>
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <Activity className="h-3.5 w-3.5" />
+                      <span>
+                        Last detected: {new Date(anomaly.timestamp).toLocaleDateString()} at {new Date(anomaly.timestamp).toLocaleTimeString()}
+                      </span>
+                    </div>
+                  </CardContent>
+                </Card>
               ))}
             </div>
           ) : (
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center h-48 text-center">
-                <Smile className="h-12 w-12 text-green-500 mb-4" />
-                <h3 className="text-lg font-semibold">All Clear!</h3>
-                <p className="text-muted-foreground mt-2">
-                  No concerning emotion patterns detected in the last {selectedDays} days.
+            <Card className="border-2 border-green-500">
+              <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+                <div className="bg-green-100 dark:bg-green-950/30 p-4 rounded-full mb-4">
+                  <Smile className="h-16 w-16 text-green-600 dark:text-green-400" />
+                </div>
+                <h3 className="text-2xl font-bold mb-2">All Clear! 🎉</h3>
+                <p className="text-muted-foreground text-lg max-w-md">
+                  No concerning emotion patterns detected in the last <span className="font-bold text-foreground">{selectedDays} days</span>.
+                </p>
+                <p className="text-sm text-muted-foreground mt-3">
+                  Your workplace sentiment is healthy and stable.
                 </p>
               </CardContent>
             </Card>
