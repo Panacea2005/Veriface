@@ -4,8 +4,27 @@ REM This script works in both CMD and PowerShell
 
 setlocal enabledelayedexpansion
 
+REM ========================================
+REM MODE SELECTION: Choose one of the following
+REM ========================================
+REM Option 1: Use DeepFace ArcFace (default)
+REM   - Preprocessing: (pixel - 127.5) / 127.5 (DeepFace standard)
+REM   - No PyTorch model required
+set DEEPFACE_ONLY=1
+
+REM Option 2: Use PyTorch trained model (from notebook)
+REM   - Preprocessing: (pixel - 127.5) / 128.0 (matches notebook exactly)
+REM   - Requires modelA_best.pth or modelB_best.pth in app/models/
+REM   - Comment out the line above and uncomment below:
+REM set DEEPFACE_ONLY=0
+
 echo ========================================
 echo Veriface Backend Setup ^& Run
+if "%DEEPFACE_ONLY%"=="1" (
+    echo Using: DeepFace ArcFace
+) else (
+    echo Using: PyTorch Trained Model
+)
 echo ========================================
 echo.
 
@@ -66,8 +85,7 @@ if errorlevel 1 (
 )
 python -m pip show torch >nul 2>&1
 if errorlevel 1 (
-    echo [MISSING] torch - Required for PyTorch embedding models
-    set MISSING_DEPS=1
+    echo [INFO] torch - Optional (not required for DeepFace mode)
 )
 
 if !MISSING_DEPS!==1 (
@@ -131,19 +149,21 @@ echo Setting environment variables...
 set MODE=heur
 set CORS_ORIGINS=http://localhost:3000,http://localhost:3001
 set PYTHONUNBUFFERED=1
-REM Enforce PyTorch Model A usage (fail fast if missing)
-set REQUIRE_TORCH=1
-set REQUIRE_MODEL_A=1
-if "%MODEL_WEIGHTS_PATH%"=="" (
-    set MODEL_WEIGHTS_PATH=app\models\modelA_best.pth
-)
+REM DEEPFACE_ONLY is already set at the top of the script
 if "%SIMILARITY_METRIC%"=="" (
     set SIMILARITY_METRIC=cosine
 )
 echo [OK] MODE=%MODE%
 echo [OK] CORS_ORIGINS=%CORS_ORIGINS%
-echo [OK] MODEL_WEIGHTS_PATH=%MODEL_WEIGHTS_PATH%
+echo [OK] DEEPFACE_ONLY=%DEEPFACE_ONLY%
 echo [OK] SIMILARITY_METRIC=%SIMILARITY_METRIC%
+if "%DEEPFACE_ONLY%"=="1" (
+    echo [OK] Embedding Model: DeepFace ArcFace
+    echo [OK] Preprocessing: DeepFace standard normalization
+) else (
+    echo [OK] Embedding Model: PyTorch Trained Model
+    echo [OK] Preprocessing: Notebook training normalization
+)
 
 REM Step 4: Create necessary directories
 echo.
@@ -161,23 +181,12 @@ if not exist "app\models" (
     echo [OK] app\models directory exists
 )
 
-REM Step 5: Verify PyTorch model files (require Model A)
+REM Step 5: Verify DeepFace installation
 echo.
-echo Verifying PyTorch embedding model files...
-if not exist "%MODEL_WEIGHTS_PATH%" (
-    echo [ERROR] Missing required model: %MODEL_WEIGHTS_PATH%
-    echo Please place your ArcFace weights ^(512-D backbone^) at the configured path or update MODEL_WEIGHTS_PATH.
-    echo.
-    pause
-    exit /b 1
-)
-
-python scripts\verify_models.py
+echo Verifying DeepFace ArcFace embedding model...
+python -c "from deepface import DeepFace; print('[OK] DeepFace ArcFace model will be downloaded automatically on first use')" 2>nul
 if errorlevel 1 (
-    echo.
-    echo [ERROR] Model verification failed. Check the message above and MODEL_WEIGHTS_PATH.
-    pause
-    exit /b 1
+    echo [WARN] DeepFace verification failed, but will retry on first use
 )
 
 REM Step 6: Run server

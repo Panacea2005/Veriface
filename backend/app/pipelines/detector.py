@@ -59,9 +59,24 @@ class FaceDetector:
         
         return None
     
-    def align(self, image: np.ndarray, bbox: Tuple[int, int, int, int]) -> np.ndarray:
-        """Crop and align face to 112x112 using DeepFace alignment if available."""
+    def align(self, image: np.ndarray, bbox: Tuple[int, int, int, int], preserve_angle: bool = False) -> np.ndarray:
+        """
+        Crop and align face to 112x112.
+        
+        Args:
+            image: Input image
+            bbox: Face bounding box (x, y, w, h)
+            preserve_angle: If True, only crop and resize (preserves angle information).
+                          If False, use DeepFace alignment (warps to front-facing).
+        """
         x, y, w, h = bbox
+        
+        # If preserve_angle is True, skip aggressive alignment to preserve angle differences
+        if preserve_angle:
+            # Simple crop and resize - preserves angle information
+            face = image[y:y+h, x:x+w]
+            face_aligned = cv2.resize(face, (112, 112))
+            return face_aligned
         
         # Try to use DeepFace's alignment (5-point landmark alignment) for better accuracy
         if self.use_deepface:

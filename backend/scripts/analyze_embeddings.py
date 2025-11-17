@@ -47,9 +47,13 @@ def analyze_registry():
             }
             print(f"  {user_id} ({data.get('name', user_id)}): {len(embeddings)} embeddings")
     
-    if len(user_embeddings) < 2:
-        print("[WARNING] Need at least 2 users to compare. Current users:", list(user_embeddings.keys()))
+    if len(user_embeddings) < 1:
+        print("[ERROR] No users found in registry")
         return
+    
+    if len(user_embeddings) < 2:
+        print("[WARNING] Only 1 user found. Will analyze intra-user similarity only.")
+        print("[WARNING] Inter-user comparison requires at least 2 users.")
     
     print("=" * 80)
     print("\n[ANALYSIS] Intra-user similarity (same person, different angles):")
@@ -66,11 +70,16 @@ def analyze_registry():
         
         # Compare all pairs within same user
         similarities = []
+        similarity_matrix = []
         for i in range(len(embeddings)):
-            for j in range(i + 1, len(embeddings)):
+            row = []
+            for j in range(len(embeddings)):
                 sim = cosine_similarity(embeddings[i], embeddings[j])
-                similarities.append(sim)
-                intra_similarities.append(sim)
+                row.append(sim)
+                if i < j:  # Only count each pair once
+                    similarities.append(sim)
+                    intra_similarities.append(sim)
+            similarity_matrix.append(row)
         
         if similarities:
             avg_sim = np.mean(similarities)
@@ -80,6 +89,27 @@ def analyze_registry():
             print(f"  {user_id} ({name}):")
             print(f"    Avg: {avg_sim:.4f}, Min: {min_sim:.4f}, Max: {max_sim:.4f}, Std: {std_sim:.4f}")
             print(f"    Range: [{min_sim:.4f}, {max_sim:.4f}]")
+            
+            # Show similarity matrix for 5-angle analysis
+            if len(embeddings) == 5:
+                print(f"    Similarity matrix (5 angles):")
+                print(f"      Angle:   1       2       3       4       5")
+                angles = ["Front", "Left", "Right", "Up", "Down"]
+                for i in range(5):
+                    row_str = f"      {angles[i]:6s}: "
+                    for j in range(5):
+                        row_str += f"{similarity_matrix[i][j]:.3f}  "
+                    print(row_str)
+                
+                # Check if all angles are too similar
+                non_diag_sims = [similarity_matrix[i][j] for i in range(5) for j in range(5) if i != j]
+                if np.mean(non_diag_sims) > 0.85:
+                    print(f"    [WARN] All 5 angles are very similar (avg: {np.mean(non_diag_sims):.3f})")
+                    print(f"           Model may not be capturing angle differences well")
+                elif np.mean(non_diag_sims) > 0.70:
+                    print(f"    [INFO] Angles are moderately similar (avg: {np.mean(non_diag_sims):.3f})")
+                else:
+                    print(f"    [OK] Angles show good variation (avg: {np.mean(non_diag_sims):.3f})")
     
     print("\n[ANALYSIS] Inter-user similarity (different people):")
     print("-" * 80)
@@ -87,31 +117,34 @@ def analyze_registry():
     inter_similarities = []
     user_ids = list(user_embeddings.keys())
     
-    for i in range(len(user_ids)):
-        for j in range(i + 1, len(user_ids)):
-            user1_id = user_ids[i]
-            user2_id = user_ids[j]
-            user1_name = user_embeddings[user1_id]["name"]
-            user2_name = user_embeddings[user2_id]["name"]
-            
-            embeddings1 = user_embeddings[user1_id]["embeddings"]
-            embeddings2 = user_embeddings[user2_id]["embeddings"]
-            
-            # Compare all pairs between different users
-            similarities = []
-            for emb1 in embeddings1:
-                for emb2 in embeddings2:
-                    sim = cosine_similarity(emb1, emb2)
-                    similarities.append(sim)
-                    inter_similarities.append(sim)
-            
-            if similarities:
-                avg_sim = np.mean(similarities)
-                min_sim = np.min(similarities)
-                max_sim = np.max(similarities)
-                std_sim = np.std(similarities)
-                print(f"  {user1_id} ({user1_name}) vs {user2_id} ({user2_name}):")
-                print(f"    Avg: {avg_sim:.4f}, Min: {min_sim:.4f}, Max: {max_sim:.4f}, Std: {std_sim:.4f}")
+    if len(user_ids) < 2:
+        print("  [SKIP] Need at least 2 users for inter-user comparison")
+    else:
+        for i in range(len(user_ids)):
+            for j in range(i + 1, len(user_ids)):
+                user1_id = user_ids[i]
+                user2_id = user_ids[j]
+                user1_name = user_embeddings[user1_id]["name"]
+                user2_name = user_embeddings[user2_id]["name"]
+                
+                embeddings1 = user_embeddings[user1_id]["embeddings"]
+                embeddings2 = user_embeddings[user2_id]["embeddings"]
+                
+                # Compare all pairs between different users
+                similarities = []
+                for emb1 in embeddings1:
+                    for emb2 in embeddings2:
+                        sim = cosine_similarity(emb1, emb2)
+                        similarities.append(sim)
+                        inter_similarities.append(sim)
+                
+                if similarities:
+                    avg_sim = np.mean(similarities)
+                    min_sim = np.min(similarities)
+                    max_sim = np.max(similarities)
+                    std_sim = np.std(similarities)
+                    print(f"  {user1_id} ({user1_name}) vs {user2_id} ({user2_name}):")
+                    print(f"    Avg: {avg_sim:.4f}, Min: {min_sim:.4f}, Max: {max_sim:.4f}, Std: {std_sim:.4f}")
     
     print("\n" + "=" * 80)
     print("[SUMMARY] Overall Statistics:")

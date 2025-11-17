@@ -55,6 +55,8 @@ export function WebcamSection({ onVerifyResult }: WebcamSectionProps) {
   const [lastVerify, setLastVerify] = useState<VerifyResponse | null>(null)
   const [spoofDialogOpen, setSpoofDialogOpen] = useState(false)
   const [spoofMessage, setSpoofMessage] = useState<string>("")
+  const webcamAreaRef = useRef<HTMLDivElement>(null)
+  const [webcamSquareSize, setWebcamSquareSize] = useState<number | null>(null)
 
   // Load registry info on mount and listen for registry updates
   useEffect(() => {
@@ -85,6 +87,26 @@ export function WebcamSection({ onVerifyResult }: WebcamSectionProps) {
       clearInterval(interval)
     }
   }, [])
+
+  // Keep webcam square sized based on container width (height matches width)
+  useEffect(() => {
+    if (mode !== "webcam") {
+      setWebcamSquareSize(null)
+      return
+    }
+    const updateSize = () => {
+      const el = webcamAreaRef.current
+      if (!el) return
+      const rect = el.getBoundingClientRect()
+      const size = Math.max(0, Math.min(rect.width, rect.height))
+      setWebcamSquareSize(size === 0 ? null : size)
+    }
+    updateSize()
+    window.addEventListener("resize", updateSize)
+    return () => {
+      window.removeEventListener("resize", updateSize)
+    }
+  }, [mode])
 
   const stopWebcam = useCallback(() => {
     if (streamRef.current) {
@@ -150,6 +172,38 @@ export function WebcamSection({ onVerifyResult }: WebcamSectionProps) {
     }
   }, [mode, startWebcam, stopWebcam])
 
+  const drawSquareFrame = (
+    ctx: CanvasRenderingContext2D,
+    video: HTMLVideoElement,
+    canvas: HTMLCanvasElement
+  ) => {
+    const videoWidth = video.videoWidth || 0
+    const videoHeight = video.videoHeight || 0
+    if (videoWidth === 0 || videoHeight === 0) return false
+    const squareSize = Math.min(videoWidth, videoHeight)
+    const offsetX = (videoWidth - squareSize) / 2
+    const offsetY = (videoHeight - squareSize) / 2
+    canvas.width = squareSize
+    canvas.height = squareSize
+
+    ctx.save()
+    ctx.translate(canvas.width, 0)
+    ctx.scale(-1, 1)
+    ctx.drawImage(
+      video,
+      offsetX,
+      offsetY,
+      squareSize,
+      squareSize,
+      0,
+      0,
+      canvas.width,
+      canvas.height
+    )
+    ctx.restore()
+    return true
+  }
+
   // Realtime emotion loop (webcam only)
   useEffect(() => {
     if (mode !== "webcam") return
@@ -159,16 +213,10 @@ export function WebcamSection({ onVerifyResult }: WebcamSectionProps) {
       const video = videoRef.current
       const canvas = canvasRef.current
       if (video.readyState !== video.HAVE_ENOUGH_DATA) return
-      canvas.width = video.videoWidth
-      canvas.height = video.videoHeight
       const ctx = canvas.getContext("2d")
       if (!ctx) return
-      // Flip horizontal for mirror effect
-      ctx.save()
-      ctx.translate(canvas.width, 0)
-      ctx.scale(-1, 1)
-      ctx.drawImage(video, 0, 0)
-      ctx.restore()
+      const drawn = drawSquareFrame(ctx, video, canvas)
+      if (!drawn) return
       emotionTickRef.current = true
       canvas.toBlob(async (blob) => {
         try {
@@ -208,17 +256,10 @@ export function WebcamSection({ onVerifyResult }: WebcamSectionProps) {
       
       // Create temporary canvas for liveness check
       const tempCanvas = document.createElement('canvas')
-      tempCanvas.width = video.videoWidth
-      tempCanvas.height = video.videoHeight
       const ctx = tempCanvas.getContext("2d")
       if (!ctx) return
-      
-      // Flip horizontal for mirror effect
-      ctx.save()
-      ctx.translate(tempCanvas.width, 0)
-      ctx.scale(-1, 1)
-      ctx.drawImage(video, 0, 0)
-      ctx.restore()
+      const drawn = drawSquareFrame(ctx, video, tempCanvas)
+      if (!drawn) return
       
       livenessTickRef.current = true
       tempCanvas.toBlob(async (blob) => {
@@ -249,22 +290,60 @@ export function WebcamSection({ onVerifyResult }: WebcamSectionProps) {
     return () => clearInterval(interval)
   }, [mode])
 
+  const ensureSquareImage = useCallback(async (file: File): Promise<File> => {
+      const dataUrl: string = await new Promise((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = () => {
+          if (typeof reader.result === "string") {
+            resolve(reader.result)
+          } else {
+            reject(new Error("Failed to read file"))
+          }
+        }
+        reader.onerror = reject
+        reader.readAsDataURL(file)
+      })
+
+      const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+        const image = new Image()
+        image.onload = () => resolve(image)
+        image.onerror = reject
+        image.src = dataUrl
+      })
+
+      const size = Math.min(img.width, img.height)
+      if (size <= 0) {
+        return file
+      }
+      const offsetX = (img.width - size) / 2
+      const offsetY = (img.height - size) / 2
+
+      const canvas = document.createElement("canvas")
+      canvas.width = canvas.height = size
+      const ctx = canvas.getContext("2d")
+      if (!ctx) return file
+
+      ctx.drawImage(img, offsetX, offsetY, size, size, 0, 0, size, size)
+
+      const blob: Blob | null = await new Promise((resolve) => {
+        canvas.toBlob((b) => resolve(b), "image/jpeg", 0.95)
+      })
+      if (!blob) {
+        return file
+      }
+      return new File([blob], file.name || "upload.jpg", { type: "image/jpeg" })
+  }, [])
+
   const captureFromWebcam = () => {
     if (!videoRef.current || !canvasRef.current) return
     
     const video = videoRef.current
     const canvas = canvasRef.current
-    canvas.width = video.videoWidth
-    canvas.height = video.videoHeight
     
     const ctx = canvas.getContext("2d")
     if (ctx) {
-      // Flip horizontal for mirror effect
-      ctx.save()
-      ctx.translate(canvas.width, 0)
-      ctx.scale(-1, 1)
-      ctx.drawImage(video, 0, 0)
-      ctx.restore()
+      const drawn = drawSquareFrame(ctx, video, canvas)
+      if (!drawn) return
       canvas.toBlob((blob) => {
         if (blob) {
           const file = new File([blob], "capture.jpg", { type: "image/jpeg" })
@@ -278,14 +357,23 @@ export function WebcamSection({ onVerifyResult }: WebcamSectionProps) {
     }
   }
 
-  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
-      setSelectedImage(file)
-      const url = URL.createObjectURL(file)
-      setPreviewUrl(url)
-      setZoom(1)
-      setPosition({ x: 0, y: 0 })
+      try {
+        const squared = await ensureSquareImage(file)
+        setSelectedImage(squared)
+        const url = URL.createObjectURL(squared)
+        setPreviewUrl(url)
+      } catch (error) {
+        console.warn("Failed to normalize upload, using original file", error)
+        setSelectedImage(file)
+        const url = URL.createObjectURL(file)
+        setPreviewUrl(url)
+      } finally {
+        setZoom(1)
+        setPosition({ x: 0, y: 0 })
+      }
     }
   }
 
@@ -302,7 +390,15 @@ export function WebcamSection({ onVerifyResult }: WebcamSectionProps) {
 
     setIsCapturing(true)
     try {
-      const result = await verifyFace(selectedImage)
+      let imageToSend: File = selectedImage
+      if (mode === "upload") {
+        try {
+          imageToSend = await ensureSquareImage(selectedImage)
+        } catch (e) {
+          console.warn("Failed to square image, using original", e)
+        }
+      }
+      const result = await verifyFace(imageToSend)
       onVerifyResult(result)
       setLastVerify(result)
       if (result.emotion_label) {
@@ -515,7 +611,7 @@ export function WebcamSection({ onVerifyResult }: WebcamSectionProps) {
         <CardContent className="flex flex-col gap-6">
           <RegistryDialog open={registryOpen} onOpenChange={setRegistryOpen} />
           {/* Main Layout: Left webcam, Right controls + emotion */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-stretch min-h-[600px]">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-stretch">
             {/* Left: Capture area (spans 2) */}
             <div className="lg:col-span-2 space-y-4 flex flex-col h-full min-h-[600px]">
                 <Tabs value={mode} onValueChange={(v) => setMode(v as Mode)} className="h-full flex flex-col">
@@ -531,46 +627,69 @@ export function WebcamSection({ onVerifyResult }: WebcamSectionProps) {
                 </TabsList>
 
                 <TabsContent value="upload" className="mt-4 flex-1">
-                  <div className="relative flex items-center justify-center overflow-hidden rounded-xl bg-muted border border-border h-full">
-                    <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageSelect} className="hidden" />
-                    {previewUrl ? (
-                      <div 
-                        ref={containerRef}
-                        className="relative w-full h-full overflow-hidden cursor-move"
-                        onMouseDown={handleMouseDown}
-                        onMouseMove={handleMouseMove}
-                        onMouseUp={handleMouseUp}
-                        onMouseLeave={handleMouseUp}
-                      >
-                        <img
-                          src={previewUrl}
-                          alt="Preview"
-                          className="w-full h-full object-contain"
-                          style={{
-                            transform: `scale(${zoom}) translate(${position.x / zoom}px, ${position.y / zoom}px)`,
-                            transformOrigin: "center center",
-                            transition: isDragging ? "none" : "transform 0.1s ease-out"
-                          }}
-                          draggable={false}
-                        />
-                      </div>
-                    ) : (
-                      <div className="flex flex-col items-center gap-3 text-muted-foreground">
-                        <Upload className="h-12 w-12 opacity-40 stroke-[1.5]" />
-                        <span className="text-sm font-medium">Select image to upload</span>
-                        <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} className="mt-2">Choose Image</Button>
-                      </div>
-                    )}
-                    {isCapturing && (
-                      <motion.div className="absolute inset-0 bg-accent/10 flex items-center justify-center z-10" initial={{ opacity: 0 }} animate={{ opacity: [0, 0.5, 0] }} transition={{ duration: 0.6 }}>
-                        <span className="text-sm font-medium">Processing...</span>
-                      </motion.div>
-                    )}
+                  <div className="flex items-center justify-center w-full h-full">
+                    <div className="relative w-full max-w-full aspect-square rounded-xl bg-muted border border-border overflow-hidden flex items-center justify-center">
+                      <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageSelect} className="hidden" />
+                      {previewUrl ? (
+                        <div 
+                          ref={containerRef}
+                          className="relative w-full h-full overflow-hidden cursor-move"
+                          onMouseDown={handleMouseDown}
+                          onMouseMove={handleMouseMove}
+                          onMouseUp={handleMouseUp}
+                          onMouseLeave={handleMouseUp}
+                        >
+                          <img
+                            src={previewUrl}
+                            alt="Preview"
+                            className="w-full h-full object-cover"
+                            style={{
+                              transform: `scale(${zoom}) translate(${position.x / zoom}px, ${position.y / zoom}px)`,
+                              transformOrigin: "center center",
+                              transition: isDragging ? "none" : "transform 0.1s ease-out"
+                            }}
+                            draggable={false}
+                          />
+                        </div>
+                      ) : (
+                        <div className="flex flex-col items-center gap-3 text-muted-foreground text-center px-4">
+                          <Upload className="h-12 w-12 opacity-40 stroke-[1.5]" />
+                          <span className="text-sm font-medium">Select an image to upload</span>
+                          <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} className="mt-2">Choose Image</Button>
+                        </div>
+                      )}
+                      {isCapturing && (
+                        <motion.div className="absolute inset-0 bg-accent/10 flex items-center justify-center z-10" initial={{ opacity: 0 }} animate={{ opacity: [0, 0.5, 0] }} transition={{ duration: 0.6 }}>
+                          <span className="text-sm font-medium">Processing...</span>
+                        </motion.div>
+                      )}
+                    </div>
                   </div>
                 </TabsContent>
 
                 <TabsContent value="webcam" className="mt-4 flex-1">
-                  <div className="relative flex items-center justify-center overflow-hidden rounded-xl bg-muted border border-border w-full h-full aspect-video lg:aspect-auto">
+                  <div ref={webcamAreaRef} className="relative flex items-center justify-center w-full h-full">
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                      <div
+                        className="relative rounded-xl border border-border overflow-hidden"
+                        style={
+                          webcamSquareSize
+                            ? { width: webcamSquareSize, height: webcamSquareSize }
+                            : { width: "100%", aspectRatio: "1 / 1" }
+                        }
+                      >
+                        <div className="absolute inset-0 bg-muted opacity-60" />
+                        <div className="absolute inset-3 rounded-lg border-2 border-border/60 border-dashed" />
+                      </div>
+                    </div>
+                    <div
+                      className="relative flex items-center justify-center overflow-hidden rounded-xl bg-muted border border-border"
+                      style={
+                        webcamSquareSize
+                          ? { width: webcamSquareSize, height: webcamSquareSize }
+                          : { width: "100%", aspectRatio: "1 / 1" }
+                      }
+                    >
                     {/* Emotion overlay badge */}
                     {liveEmotion && liveEmotion.probs && Object.keys(liveEmotion.probs).length > 0 && (
                       (() => {
@@ -639,15 +758,16 @@ export function WebcamSection({ onVerifyResult }: WebcamSectionProps) {
                       </motion.div>
                     )}
                     <canvas ref={canvasRef} className="hidden" />
+                    </div>
                   </div>
                 </TabsContent>
               </Tabs>
             </div>
 
             {/* Right: Status + Emotion + Controls (bento grid) */}
-            <div className="grid grid-rows-[auto,1fr,auto] gap-4 h-full">
+            <div className="flex flex-col gap-4 h-full">
               {/* Compact Verification Status */}
-              <div className="rounded-lg border border-border p-3 space-y-3">
+              <div className="rounded-lg border border-border p-3 space-y-3 flex-shrink-0">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-semibold">Status</span>
                   {lastVerify ? (
@@ -734,12 +854,12 @@ export function WebcamSection({ onVerifyResult }: WebcamSectionProps) {
               </div>
 
               {/* Realtime Emotion */}
-              <div className="rounded-lg border border-border p-3">
-                <div className="text-sm font-semibold mb-2">
+              <div className="rounded-lg border border-border p-3 flex-1 flex flex-col">
+                <div className="text-sm font-semibold mb-3">
                   <span>Emotion (real-time)</span>
                 </div>
                 {liveEmotion && liveEmotion.probs && Object.keys(liveEmotion.probs).length > 0 ? (
-                  <div className="space-y-2 min-h-44">
+                  <div className="space-y-2 min-h-44 flex-1">
                     {Object.entries(liveEmotion.probs)
                       .sort((a, b) => b[1] - a[1])
                       .map(([k, v]) => (
@@ -798,12 +918,14 @@ export function WebcamSection({ onVerifyResult }: WebcamSectionProps) {
                     })()}
                   </div>
                 ) : (
-                  <div className="text-xs text-foreground/70">No emotion yet. Capture to view.</div>
+                  <div className="text-xs text-foreground/70 flex-1 flex items-center justify-center text-center px-3">
+                    No emotion yet. Capture to view.
+                  </div>
                 )}
               </div>
 
               {/* Controls */}
-              <div className="rounded-lg border border-border p-3 space-y-3 mt-auto">
+              <div className="rounded-lg border border-border p-3 space-y-3 flex-shrink-0">
                 <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
                   <Button variant="secondary" onClick={handleVerify} className="w-full gap-2 h-10 rounded-lg shadow-sm" disabled={isCapturing || (mode === "upload" && !selectedImage)}>
                     <Camera className="h-4 w-4 stroke-[1.5]" />

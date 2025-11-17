@@ -157,17 +157,34 @@ export function RegisterWebcamDialog({ open, onOpenChange }: RegisterWebcamDialo
     const video = videoRef.current
     const canvas = canvasRef.current
     if (!video || !canvas || video.readyState !== video.HAVE_ENOUGH_DATA) return null
-    
-    canvas.width = video.videoWidth
-    canvas.height = video.videoHeight
+
+    // Crop the webcam frame to a centered square to reduce background noise
+    const videoWidth = video.videoWidth
+    const videoHeight = video.videoHeight
+    const squareSize = Math.min(videoWidth, videoHeight)
+    const offsetX = (videoWidth - squareSize) / 2
+    const offsetY = (videoHeight - squareSize) / 2
+
+    canvas.width = squareSize
+    canvas.height = squareSize
     const ctx = canvas.getContext('2d')
     if (!ctx) return null
-    
-    // Flip horizontal for mirror effect
+
+    // Flip horizontal for mirror effect, then draw the centered square crop
     ctx.save()
     ctx.translate(canvas.width, 0)
     ctx.scale(-1, 1)
-    ctx.drawImage(video, 0, 0)
+    ctx.drawImage(
+      video,
+      offsetX,
+      offsetY,
+      squareSize,
+      squareSize,
+      0,
+      0,
+      canvas.width,
+      canvas.height
+    )
     ctx.restore()
     return canvas.toDataURL('image/jpeg', 0.95)
   }, [])
@@ -180,13 +197,18 @@ export function RegisterWebcamDialog({ open, onOpenChange }: RegisterWebcamDialo
 
     setIsCapturing(true)
     setIsProcessing(true)
-    lastCaptureTimeRef.current = Date.now() // Update last capture time
+    const captureTime = Date.now()
+    lastCaptureTimeRef.current = captureTime // Update last capture time
     
     try {
       const imageData = await captureImage()
       if (!imageData) {
         throw new Error("Failed to capture image")
       }
+      
+      // Debug: Log capture info
+      const currentAngle = steps[currentStep].angle
+      console.log(`[DEBUG] Capture: angle=${currentAngle}, step=${currentStep + 1}, time=${captureTime}, dataLength=${imageData.length}`)
       
       // Update step with captured image
       setSteps(prev => {
@@ -527,7 +549,7 @@ export function RegisterWebcamDialog({ open, onOpenChange }: RegisterWebcamDialo
             {/* Preview Grid - Right */}
             <div className="lg:col-span-2 flex flex-col min-h-0">
               <Label className="text-xs font-medium mb-2 flex-shrink-0">Captured Angles</Label>
-              <div className="relative flex-1 min-h-0">
+              <div className="relative flex-1 min-h-0 overflow-visible">
                 {/* 2D Stack of Images - Each image overlaps bottom-right corner of previous, positioned at top-left */}
                 {steps.map((step, index) => {
                   const totalSteps = steps.length
@@ -553,7 +575,7 @@ export function RegisterWebcamDialog({ open, onOpenChange }: RegisterWebcamDialo
                           : "border-border bg-muted"
                       }`}
                       style={{
-                        zIndex: hoveredIndex === index ? totalSteps + 1 : zIndex,
+                        zIndex: hoveredIndex === index ? 999 : zIndex,
                         width: "60%",
                         height: "60%",
                         maxWidth: "200px",
@@ -562,7 +584,7 @@ export function RegisterWebcamDialog({ open, onOpenChange }: RegisterWebcamDialo
                       initial={{ opacity: 0, scale: 0.9 }}
                       animate={{ 
                         opacity: 1, 
-                        scale: 1,
+                        scale: hoveredIndex === index ? 1.5 : 1,
                         y: hoveredIndex === index ? translateY - 30 : translateY,
                         x: hoveredIndex === index ? translateX - 60 : translateX,
                       }}

@@ -97,7 +97,8 @@ async def register(
         
         # Extract embedding
         try:
-            embed_model = EmbedModel()
+            # Force model_type='B' to use TorchScript modelB_convnext_tiny.pt
+            embed_model = EmbedModel(model_type="B")
             model_type_used = "PyTorch" if embed_model.model is not None else "DeepFace"
             print(f"[DEBUG] Register: Using {model_type_used} model for embedding extraction", file=sys.stderr)
             embedding = embed_model.extract(face_aligned)
@@ -106,18 +107,15 @@ async def register(
             embedding_std = np.std(embedding) if embedding is not None else 0.0
             embedding_min = np.min(embedding) if embedding is not None else 0.0
             embedding_max = np.max(embedding) if embedding is not None else 0.0
-            # Sample first 5 values for debugging
             embedding_sample = embedding[:5].tolist() if embedding is not None and len(embedding) >= 5 else []
             print(f"[DEBUG] Register: Embedding shape: {embedding.shape if embedding is not None else None}, norm: {embedding_norm:.6f}, mean: {embedding_mean:.6f}, std: {embedding_std:.6f}, min: {embedding_min:.6f}, max: {embedding_max:.6f}", file=sys.stderr)
             print(f"[DEBUG] Register: Embedding sample (first 5): {embedding_sample}", file=sys.stderr)
-            
             # Check if embedding is all zeros or constant (indicates model failure)
             if embedding is not None:
                 if embedding_norm < 1e-6:
                     raise ValueError("Embedding is all zeros - model may not be working correctly")
                 if embedding_std < 1e-6:
                     raise ValueError("Embedding has zero variance - model may not be working correctly")
-            
             if embedding is None or embedding.size == 0:
                 raise ValueError("Failed to extract embedding")
         except Exception as e:
@@ -241,7 +239,9 @@ async def register_batch(
                     print(f"[WARN] Register Batch: No face detected in image {idx+1}, skipping", file=sys.stderr)
                     continue
                 
-                face_aligned = detector.align(img, bbox)
+                # Use preserve_angle=True for multi-angle registration to keep angle differences
+                # This prevents aggressive alignment from warping all angles to front-facing
+                face_aligned = detector.align(img, bbox, preserve_angle=True)
                 if face_aligned is None or face_aligned.size == 0:
                     print(f"[WARN] Register Batch: Failed to align face in image {idx+1}, skipping", file=sys.stderr)
                     continue

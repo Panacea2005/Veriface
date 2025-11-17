@@ -42,6 +42,7 @@ if add_safe_globals is not None:
     except Exception:
         pass
 
+
 path = weights_env
 if not path.exists():
     print(f"[ERROR] Weights file not found at: {path}")
@@ -52,34 +53,44 @@ print(f"[OK] Weights FOUND ({size_mb:.1f} MB) at {path}")
 print(f"[INFO] Loading weights...")
 
 try:
-    model = get_model(input_size=[112, 112], num_layers=100, mode="ir")
-
-    # Torch >= 2.6 defaults weights_only=True; force False for legacy checkpoints
-    try:
-        checkpoint = torch.load(str(path), map_location="cpu", weights_only=False)
-    except TypeError:  # torch < 2.6
-        checkpoint = torch.load(str(path), map_location="cpu")
-
-    if isinstance(checkpoint, dict) and not ("state_dict" in checkpoint or "model" in checkpoint):
-        state_dict = checkpoint
+    # If file ends with .pt, treat as TorchScript
+    if str(path).endswith(".pt"):
+        model = torch.jit.load(str(path), map_location="cpu")
+        model.eval()
+        with torch.no_grad():
+            output = model(torch.randn(1, 3, 112, 112))
+        if output.shape[-1] == 512:
+            print(f"[OK] Output dim {output.shape[-1]} (expected 512)")
+            sys.exit(0)
+        else:
+            print(f"[ERROR] Unexpected output dim {output.shape[-1]} (expected 512)")
+            sys.exit(2)
     else:
-        state_dict = checkpoint.get("state_dict", checkpoint.get("model", checkpoint))
+        # Fallback: treat as checkpoint
+        model = get_model(input_size=[112, 112], num_layers=100, mode="ir")
+        try:
+            checkpoint = torch.load(str(path), map_location="cpu", weights_only=False)
+        except TypeError:
+            checkpoint = torch.load(str(path), map_location="cpu")
 
-    model.load_state_dict(state_dict, strict=False)
+        if isinstance(checkpoint, dict) and not ("state_dict" in checkpoint or "model" in checkpoint):
+            state_dict = checkpoint
+        else:
+            state_dict = checkpoint.get("state_dict", checkpoint.get("model", checkpoint))
 
-    model.eval()
-    with torch.no_grad():
-        output = model(torch.randn(1, 3, 112, 112))
-    if output.shape[-1] == 512:
-        print(f"[OK] Output dim {output.shape[-1]} (expected 512)")
-        sys.exit(0)
-    else:
-        print(f"[ERROR] Unexpected output dim {output.shape[-1]} (expected 512)")
-        sys.exit(2)
+        model.load_state_dict(state_dict, strict=False)
+        model.eval()
+        with torch.no_grad():
+            output = model(torch.randn(1, 3, 112, 112))
+        if output.shape[-1] == 512:
+            print(f"[OK] Output dim {output.shape[-1]} (expected 512)")
+            sys.exit(0)
+        else:
+            print(f"[ERROR] Unexpected output dim {output.shape[-1]} (expected 512)")
+            sys.exit(2)
 
-except Exception as exc:  # pragma: no cover - diagnostic output only
+except Exception as exc:
     msg = str(exc).replace("\n", " ")[:200]
     print(f"[ERROR] Failed to load/infer - {msg}")
     sys.exit(3)
 
-sys.exit(0)

@@ -111,6 +111,7 @@ async def verify(
             )
         
         # Prepare initial result
+        x, y, w, h = bbox
         result = {
             "liveness": liveness,
             "matched_id": None,
@@ -119,6 +120,7 @@ async def verify(
             "threshold": None,
             "emotion_label": None,
             "emotion_confidence": None,
+            "bbox": {"x": int(x), "y": int(y), "w": int(w), "h": int(h)},
             "all_scores": []
         }
         
@@ -157,7 +159,8 @@ async def verify(
         # Extract embedding
         try:
             print(f"[DEBUG] Extracting embedding...", file=sys.stderr)
-            embed_model = EmbedModel()
+            # Force model_type='B' to use Model B R100 checkpoint (modelB_best.pth)
+            embed_model = EmbedModel(model_type="B")
             model_type_used = "PyTorch" if embed_model.model is not None else "DeepFace"
             print(f"[DEBUG] Using {model_type_used} model for embedding extraction", file=sys.stderr)
             embedding = embed_model.extract(face_aligned)

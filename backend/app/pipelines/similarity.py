@@ -7,11 +7,23 @@ class SimilarityMatcher:
     """Similarity computation and matching with advanced multi-embedding aggregation."""
     
     def __init__(self):
+        import os
         with open(THRESHOLDS_PATH) as f:
             self.config = yaml.safe_load(f)
         
-        # Threshold settings
-        self.cosine_threshold = self.config.get("similarity", {}).get("cosine", {}).get("threshold", 0.75)
+        # Auto-select threshold based on model type (PyTorch or DeepFace)
+        use_deepface = os.environ.get("DEEPFACE_ONLY", "0") == "1"
+        cosine_config = self.config.get("similarity", {}).get("cosine", {})
+        
+        if use_deepface:
+            # Use DeepFace ArcFace threshold (standard: 0.68)
+            self.cosine_threshold = cosine_config.get("threshold_deepface", 0.68)
+            print(f"[INFO] Using DeepFace ArcFace threshold: {self.cosine_threshold}", file=__import__('sys').stderr)
+        else:
+            # Use PyTorch trained model threshold (validated: 0.4)
+            self.cosine_threshold = cosine_config.get("threshold_pytorch", cosine_config.get("threshold", 0.4))
+            print(f"[INFO] Using PyTorch trained model threshold: {self.cosine_threshold}", file=__import__('sys').stderr)
+        
         self.euclidean_threshold = self.config.get("similarity", {}).get("euclidean", {}).get("threshold", 5.0)
         
         # Aggregation method: "max", "mean", "median", "top_k", "delta_margin", "hybrid"
