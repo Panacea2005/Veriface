@@ -15,6 +15,15 @@ except Exception:
 MODE: Literal["heur", "onnx"] = os.getenv("MODE", "heur")
 SIMILARITY_METRIC: Literal["cosine", "euclidean"] = os.getenv("SIMILARITY_METRIC", "cosine")  # backend-wide default
 
+# Model selection: "A", "B", or "deepface" (default: "A")
+# - "A": Use Model A (modelA_best.pth)
+# - "B": Use Model B (modelB_best.pth)
+# - "deepface": Use DeepFace ArcFace (ignores DEEPFACE_ONLY)
+_model_type_raw = os.getenv("MODEL_TYPE", "A").lower()
+if _model_type_raw not in ["a", "b", "deepface"]:
+    _model_type_raw = "a"
+MODEL_TYPE: Literal["A", "B", "deepface"] = _model_type_raw if _model_type_raw == "deepface" else _model_type_raw.upper()  # type: ignore
+
 # Paths
 BASE_DIR = Path(__file__).parent.parent
 MODELS_DIR = BASE_DIR / "models"

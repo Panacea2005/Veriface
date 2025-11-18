@@ -11,6 +11,7 @@ from app.pipelines.detector import FaceDetector
 from app.pipelines.embedding import EmbedModel
 from app.pipelines.liveness import LivenessModel
 from app.pipelines.registry import FaceRegistry
+from app.core.config import MODEL_TYPE
 
 router = APIRouter()
 detector = FaceDetector()
@@ -97,10 +98,17 @@ async def register(
         
         # Extract embedding
         try:
-            # Force model_type='B' to use TorchScript modelB_convnext_tiny.pt
-            embed_model = EmbedModel(model_type="B")
-            model_type_used = "PyTorch" if embed_model.model is not None else "DeepFace"
-            print(f"[DEBUG] Register: Using {model_type_used} model for embedding extraction", file=sys.stderr)
+            # Use MODEL_TYPE from config (set via env var in run.bat)
+            # MODEL_TYPE can be "A", "B", or "deepface"
+            if MODEL_TYPE == "deepface":
+                # Force DeepFace mode
+                import os
+                os.environ["DEEPFACE_ONLY"] = "1"
+                embed_model = EmbedModel(model_type="A")  # model_type ignored when DEEPFACE_ONLY=1
+            else:
+                embed_model = EmbedModel(model_type=MODEL_TYPE)
+            model_type_used = "DeepFace" if embed_model.use_deepface else f"PyTorch Model {embed_model.model_type}"
+            print(f"[DEBUG] Register: Using {model_type_used} for embedding extraction", file=sys.stderr)
             embedding = embed_model.extract(face_aligned)
             embedding_norm = np.linalg.norm(embedding) if embedding is not None else 0.0
             embedding_mean = np.mean(embedding) if embedding is not None else 0.0
@@ -199,7 +207,13 @@ async def register_batch(
         raise HTTPException(status_code=400, detail="At least one image is required")
     
     try:
-        embed_model = EmbedModel()
+        # Use MODEL_TYPE from config (set via env var in run.bat)
+        if MODEL_TYPE == "deepface":
+            import os
+            os.environ["DEEPFACE_ONLY"] = "1"
+            embed_model = EmbedModel(model_type="A")  # model_type ignored when DEEPFACE_ONLY=1
+        else:
+            embed_model = EmbedModel(model_type=MODEL_TYPE)
         embeddings_list = []
         successful_count = 0
         # Duplicate control threshold (cosine)

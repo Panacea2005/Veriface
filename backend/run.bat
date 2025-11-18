@@ -5,25 +5,41 @@ REM This script works in both CMD and PowerShell
 setlocal enabledelayedexpansion
 
 REM ========================================
-REM MODE SELECTION: Choose one of the following
+REM MODEL SELECTION: Choose one of the following
 REM ========================================
-REM Option 1: Use DeepFace ArcFace (default)
-REM   - Preprocessing: (pixel - 127.5) / 127.5 (DeepFace standard)
-REM   - No PyTorch model required
-set DEEPFACE_ONLY=1
-
-REM Option 2: Use PyTorch trained model (from notebook)
+REM Option 1: Use Model A (PyTorch trained - Triplet Loss + ConvNeXt Tiny)
+REM   - Set MODEL_TYPE=A
+REM   - Requires modelA_best.pth in app/models/
 REM   - Preprocessing: (pixel - 127.5) / 128.0 (matches notebook exactly)
-REM   - Requires modelA_best.pth or modelB_best.pth in app/models/
-REM   - Comment out the line above and uncomment below:
-REM set DEEPFACE_ONLY=0
+REM
+REM Option 2: Use Model B (PyTorch trained - Sub-Center ArcFace + R100)
+REM   - Set MODEL_TYPE=B
+REM   - Requires modelB_best.pth in app/models/
+REM   - Preprocessing: (pixel - 127.5) / 128.0 (matches notebook exactly)
+REM
+REM Option 3: Use DeepFace ArcFace (pretrained, no training required)
+REM   - Set MODEL_TYPE=deepface
+REM   - No PyTorch model required
+REM   - Preprocessing: (pixel - 127.5) / 127.5 (DeepFace standard)
+
+REM ========================================
+REM CHANGE THIS LINE TO SWITCH MODELS:
+REM ========================================
+set MODEL_TYPE=A
+
+REM Auto-set DEEPFACE_ONLY based on MODEL_TYPE
+if "%MODEL_TYPE%"=="deepface" (
+    set DEEPFACE_ONLY=1
+) else (
+    set DEEPFACE_ONLY=0
+)
 
 echo ========================================
 echo Veriface Backend Setup ^& Run
-if "%DEEPFACE_ONLY%"=="1" (
+if "%MODEL_TYPE%"=="deepface" (
     echo Using: DeepFace ArcFace
 ) else (
-    echo Using: PyTorch Trained Model
+    echo Using: PyTorch Model %MODEL_TYPE%
 )
 echo ========================================
 echo.
@@ -149,19 +165,42 @@ echo Setting environment variables...
 set MODE=heur
 set CORS_ORIGINS=http://localhost:3000,http://localhost:3001
 set PYTHONUNBUFFERED=1
-REM DEEPFACE_ONLY is already set at the top of the script
+REM MODEL_TYPE and DEEPFACE_ONLY are already set at the top of the script
 if "%SIMILARITY_METRIC%"=="" (
     set SIMILARITY_METRIC=cosine
 )
+REM Set model weights path based on MODEL_TYPE
+if "%MODEL_TYPE%"=="A" (
+    set MODEL_WEIGHTS_PATH=app\models\modelA_best.pth
+    set REQUIRE_MODEL_A=1
+    set REQUIRE_MODEL_B=0
+) else if "%MODEL_TYPE%"=="B" (
+    set MODEL_WEIGHTS_PATH=app\models\modelB_best.pth
+    set REQUIRE_MODEL_A=0
+    set REQUIRE_MODEL_B=1
+    set BACKBONE_MODE=ir
+    set BACKBONE_LAYERS=100
+) else (
+    set MODEL_WEIGHTS_PATH=
+    set REQUIRE_MODEL_A=0
+    set REQUIRE_MODEL_B=0
+)
+if "%DEEPFACE_ONLY%"=="0" (
+    set REQUIRE_TORCH=1
+) else (
+    set REQUIRE_TORCH=0
+)
 echo [OK] MODE=%MODE%
 echo [OK] CORS_ORIGINS=%CORS_ORIGINS%
+echo [OK] MODEL_TYPE=%MODEL_TYPE%
 echo [OK] DEEPFACE_ONLY=%DEEPFACE_ONLY%
 echo [OK] SIMILARITY_METRIC=%SIMILARITY_METRIC%
-if "%DEEPFACE_ONLY%"=="1" (
+if "%MODEL_TYPE%"=="deepface" (
     echo [OK] Embedding Model: DeepFace ArcFace
     echo [OK] Preprocessing: DeepFace standard normalization
 ) else (
-    echo [OK] Embedding Model: PyTorch Trained Model
+    echo [OK] Embedding Model: PyTorch Model %MODEL_TYPE%
+    echo [OK] Model Weights: %MODEL_WEIGHTS_PATH%
     echo [OK] Preprocessing: Notebook training normalization
 )
 
@@ -181,12 +220,34 @@ if not exist "app\models" (
     echo [OK] app\models directory exists
 )
 
-REM Step 5: Verify DeepFace installation
-echo.
-echo Verifying DeepFace ArcFace embedding model...
-python -c "from deepface import DeepFace; print('[OK] DeepFace ArcFace model will be downloaded automatically on first use')" 2>nul
-if errorlevel 1 (
-    echo [WARN] DeepFace verification failed, but will retry on first use
+REM Step 5: Verify model files (if using PyTorch)
+if "%DEEPFACE_ONLY%"=="0" (
+    echo.
+    echo Verifying PyTorch model files - Model %MODEL_TYPE%...
+    if not exist "%MODEL_WEIGHTS_PATH%" (
+        echo [ERROR] Missing required model: %MODEL_WEIGHTS_PATH%
+        echo Please place your Model %MODEL_TYPE% checkpoint at the configured path.
+        echo Expected path: %MODEL_WEIGHTS_PATH%
+        echo.
+        pause
+        exit /b 1
+    )
+    echo [OK] Model %MODEL_TYPE% checkpoint found: %MODEL_WEIGHTS_PATH%
+    
+    python scripts\verify_models.py
+    if errorlevel 1 (
+        echo.
+        echo [ERROR] Model verification failed. Check the message above and MODEL_WEIGHTS_PATH.
+        pause
+        exit /b 1
+    )
+) else (
+    echo.
+    echo Verifying DeepFace ArcFace embedding model...
+    python -c "from deepface import DeepFace; print('[OK] DeepFace ArcFace model will be downloaded automatically on first use')" 2>nul
+    if errorlevel 1 (
+        echo [WARN] DeepFace verification failed, but will retry on first use
+    )
 )
 
 REM Step 6: Run server
