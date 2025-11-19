@@ -8,7 +8,7 @@ import io
 import sys
 
 from app.pipelines.detector import FaceDetector
-from app.pipelines.embedding import EmbedModel
+from app.pipelines.embedding import EmbedModel, extract_dual_embeddings
 from app.pipelines.liveness import LivenessModel
 from app.pipelines.registry import FaceRegistry
 from app.core.config import MODEL_TYPE
@@ -96,76 +96,57 @@ async def register(
         # if not liveness["passed"]:
         #     raise HTTPException(status_code=400, detail="Liveness check failed")
         
-        # Extract embedding
+        # Extract embeddings using Model A
         try:
-            # Use MODEL_TYPE from config (set via env var in run.bat)
-            # MODEL_TYPE can be "A", "B", or "deepface"
-            if MODEL_TYPE == "deepface":
-                # Force DeepFace mode
-                import os
-                os.environ["DEEPFACE_ONLY"] = "1"
-                embed_model = EmbedModel(model_type="A")  # model_type ignored when DEEPFACE_ONLY=1
-            else:
-                embed_model = EmbedModel(model_type=MODEL_TYPE)
-            model_type_used = "DeepFace" if embed_model.use_deepface else f"PyTorch Model {embed_model.model_type}"
-            print(f"[DEBUG] Register: Using {model_type_used} for embedding extraction", file=sys.stderr)
-            embedding = embed_model.extract(face_aligned)
-            embedding_norm = np.linalg.norm(embedding) if embedding is not None else 0.0
-            embedding_mean = np.mean(embedding) if embedding is not None else 0.0
-            embedding_std = np.std(embedding) if embedding is not None else 0.0
-            embedding_min = np.min(embedding) if embedding is not None else 0.0
-            embedding_max = np.max(embedding) if embedding is not None else 0.0
-            embedding_sample = embedding[:5].tolist() if embedding is not None and len(embedding) >= 5 else []
-            print(f"[DEBUG] Register: Embedding shape: {embedding.shape if embedding is not None else None}, norm: {embedding_norm:.6f}, mean: {embedding_mean:.6f}, std: {embedding_std:.6f}, min: {embedding_min:.6f}, max: {embedding_max:.6f}", file=sys.stderr)
-            print(f"[DEBUG] Register: Embedding sample (first 5): {embedding_sample}", file=sys.stderr)
-            # Check if embedding is all zeros or constant (indicates model failure)
-            if embedding is not None:
-                if embedding_norm < 1e-6:
-                    raise ValueError("Embedding is all zeros - model may not be working correctly")
-                if embedding_std < 1e-6:
-                    raise ValueError("Embedding has zero variance - model may not be working correctly")
-            if embedding is None or embedding.size == 0:
-                raise ValueError("Failed to extract embedding")
+            embeddings_by_model, embed_model = extract_dual_embeddings(face_aligned, preferred_model=MODEL_TYPE)
+            if not embeddings_by_model or "torch" not in embeddings_by_model:
+                raise ValueError("Embedding extraction returned no vectors")
+            torch_vector = embeddings_by_model.get("torch")
+            if torch_vector is not None:
+                vec_norm = float(np.linalg.norm(torch_vector))
+                vec_std = float(np.std(torch_vector))
+                vec_sample = torch_vector[:5].tolist() if len(torch_vector) >= 5 else torch_vector.tolist()
+                print(f"[DEBUG] Register: Embedding norm={vec_norm:.6f}, std={vec_std:.6f}, sample={vec_sample}", file=sys.stderr)
+                if vec_norm < 1e-6 or vec_std < 1e-6:
+                    raise ValueError(f"Embedding invalid (norm={vec_norm:.6f}, std={vec_std:.6f})")
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Embedding extraction failed: {str(e)}")
         
-        # Save to registry
+        # Save to registry (replace existing embeddings to ensure only 1 front-facing embedding)
         try:
-            # Check if this embedding already exists for this user (avoid duplicates)
-            # If user_id provided, check existing embeddings
-            check_user_id = user_id if user_id else None
-            if check_user_id:
-                existing_vectors = registry.get_user_vectors(check_user_id)
+            torch_embedding = embeddings_by_model.get("torch")
+            deepface_embedding = embeddings_by_model.get("deepface")
+            
+            # Remove existing embeddings if user_id provided (to ensure only 1 embedding)
+            if user_id:
+                existing_vectors = registry.get_user_vectors(user_id, model="torch")
                 if existing_vectors:
-                    # Compare with existing embeddings
-                    for idx, existing_vec in enumerate(existing_vectors):
-                        existing_array = np.array(existing_vec, dtype=np.float32)
-                        # Normalize for comparison
-                        existing_norm = np.linalg.norm(existing_array)
-                        if existing_norm > 0.1:
-                            existing_array = existing_array / existing_norm
-                        similarity = np.dot(embedding, existing_array)
-                        distance = np.linalg.norm(embedding - existing_array)
-                        print(f"[DEBUG] Register: Comparing with existing embedding {idx+1}: similarity={similarity:.6f}, distance={distance:.6f}", file=sys.stderr)
-                        if distance < 1e-6 or similarity > 0.9999:
-                            print(f"[WARNING] Register: New embedding is nearly identical to existing embedding {idx+1} (distance: {distance:.6f}, similarity: {similarity:.6f})", file=sys.stderr)
+                    print(f"[DEBUG] Register: Removing existing embeddings for user '{user_id}' to ensure single front-facing embedding", file=sys.stderr)
+                    registry.remove_user(user_id)
             
-            # Add user - returns user_id (generated or provided)
-            final_user_id = registry.add_user(name=name, embedding=embedding, user_id=user_id)
-            print(f"[DEBUG] Register: Successfully saved embedding for user '{final_user_id}' (name: '{name}')", file=sys.stderr)
+            final_user_id = user_id
+            # Save embedding with replace=True to ensure only 1 embedding per user
+            if torch_embedding is not None:
+                final_user_id = registry.add_user(name=name, embedding=torch_embedding, user_id=final_user_id, model="torch", replace=True)
+                print(f"[DEBUG] Register: Saved embedding for user '{final_user_id}'", file=sys.stderr)
+            if deepface_embedding is not None:
+                final_user_id = registry.add_user(name=name, embedding=deepface_embedding, user_id=final_user_id, model="deepface", replace=True)
+            if final_user_id is None:
+                raise ValueError("Failed to persist embeddings for this user")
             
-            # Get updated embedding count
-            updated_vectors = registry.get_user_vectors(final_user_id)
+            counts = registry.get_user_embedding_counts(final_user_id)
+            total_embeddings = counts["torch"]
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Failed to save to registry: {str(e)}")
         
+        primary_vector = torch_embedding if torch_embedding is not None else deepface_embedding
         return {
             "status": "success",
             "user_id": final_user_id,
             "name": name,
-            "embedding_count": len(updated_vectors),
-            "model": "A",
-            "embedding_shape": list(embedding.shape)
+            "embedding_count": total_embeddings,
+            "model": MODEL_TYPE,
+            "embedding_shape": list(primary_vector.shape) if primary_vector is not None else []
         }
     except HTTPException:
         raise
@@ -192,36 +173,27 @@ async def register_batch(
     images: list[UploadFile] = File(...)
 ):
     """
-    Register a user with multiple images and save all embeddings separately for better accuracy.
-    Each angle (front, left, right, up, down) will have its own embedding stored.
-    During verification, the system will match against any of these embeddings.
-    This is ideal for multi-angle face capture (like Face ID).
+    Register a user with multiple images but only save the front-facing image embedding.
+    Only the first valid face image (assumed to be front-facing) will be saved.
+    This simplifies verification by matching against a single front-facing embedding.
     
     Args:
         name: User's full name (required)
-        user_id: Optional user_id. If provided and exists, adds embeddings to that user.
+        user_id: Optional user_id. If provided and exists, replaces embeddings for that user.
                  If not provided, auto-generates new ID (SWS00001, SWS00002, etc.)
-        images: List of face images from different angles
+        images: List of face images (only first valid front-facing image will be saved)
     """
     if not images or len(images) == 0:
         raise HTTPException(status_code=400, detail="At least one image is required")
     
     try:
-        # Use MODEL_TYPE from config (set via env var in run.bat)
-        if MODEL_TYPE == "deepface":
-            import os
-            os.environ["DEEPFACE_ONLY"] = "1"
-            embed_model = EmbedModel(model_type="A")  # model_type ignored when DEEPFACE_ONLY=1
-        else:
-            embed_model = EmbedModel(model_type=MODEL_TYPE)
-        embeddings_list = []
-        successful_count = 0
-        # Duplicate control threshold (cosine)
-        import os as _os
-        try:
-            duplicate_thresh = float(_os.getenv("SIMILARITY_DUPLICATE_THRESHOLD", "0.999"))
-        except Exception:
-            duplicate_thresh = 0.999
+        # Prepare primary embed model once (reuse for all images)
+        # Model A/B always runs (PyTorch model)
+        embed_model = EmbedModel(model_type=MODEL_TYPE)
+        
+        # Process all images: first one is saved, others are for visualization
+        front_embeddings = None  # Embedding to save (first valid image)
+        processing_results = []  # All processing results for visualization
         
         for idx, image_file in enumerate(images):
             try:
@@ -232,6 +204,11 @@ async def register_batch(
                 # Validate image dimensions
                 if len(img.shape) < 2:
                     print(f"[WARN] Register Batch: Image {idx+1} has invalid format, skipping", file=sys.stderr)
+                    processing_results.append({
+                        "image_index": idx + 1,
+                        "status": "skipped",
+                        "reason": "invalid_format"
+                    })
                     continue
                 
                 # Convert RGB to BGR for OpenCV
@@ -243,6 +220,11 @@ async def register_batch(
                         img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
                     else:
                         print(f"[WARN] Register Batch: Image {idx+1} has unsupported channels, skipping", file=sys.stderr)
+                        processing_results.append({
+                            "image_index": idx + 1,
+                            "status": "skipped",
+                            "reason": "unsupported_channels"
+                        })
                         continue
                 elif len(img.shape) == 2:
                     img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
@@ -251,77 +233,122 @@ async def register_batch(
                 bbox = detector.detect(img)
                 if bbox is None:
                     print(f"[WARN] Register Batch: No face detected in image {idx+1}, skipping", file=sys.stderr)
+                    processing_results.append({
+                        "image_index": idx + 1,
+                        "status": "skipped",
+                        "reason": "no_face_detected"
+                    })
                     continue
                 
-                # Use preserve_angle=True for multi-angle registration to keep angle differences
-                # This prevents aggressive alignment from warping all angles to front-facing
-                face_aligned = detector.align(img, bbox, preserve_angle=True)
+                # Use standard alignment (front-facing) for all images
+                face_aligned = detector.align(img, bbox, preserve_angle=False)
                 if face_aligned is None or face_aligned.size == 0:
                     print(f"[WARN] Register Batch: Failed to align face in image {idx+1}, skipping", file=sys.stderr)
+                    processing_results.append({
+                        "image_index": idx + 1,
+                        "status": "skipped",
+                        "reason": "alignment_failed"
+                    })
                     continue
                 
-                # Extract embedding
-                embedding = embed_model.extract(face_aligned)
-                if embedding is None or embedding.size == 0:
-                    print(f"[WARN] Register Batch: Failed to extract embedding from image {idx+1}, skipping", file=sys.stderr)
+                # Extract embeddings (reuse model instance)
+                embeddings_by_model, _ = extract_dual_embeddings(face_aligned, preferred_model=MODEL_TYPE, reuse_model=embed_model)
+                if not embeddings_by_model:
+                    print(f"[WARN] Register Batch: Failed to extract embeddings from image {idx+1}, skipping", file=sys.stderr)
+                    processing_results.append({
+                        "image_index": idx + 1,
+                        "status": "skipped",
+                        "reason": "embedding_extraction_failed"
+                    })
                     continue
                 
-                # Normalize embedding (L2 normalization)
-                embedding_norm = np.linalg.norm(embedding)
-                if embedding_norm < 1e-6:
-                    print(f"[WARN] Register Batch: Embedding from image {idx+1} is all zeros, skipping", file=sys.stderr)
-                    continue
+                # Calculate embedding stats for visualization
+                torch_emb = embeddings_by_model.get("torch")
+                result_info = {
+                    "image_index": idx + 1,
+                    "status": "processed",
+                    "has_torch": torch_emb is not None
+                }
                 
-                embedding_normalized = embedding / embedding_norm
-
-                # Append all embeddings; deduplication disabled to ensure all angles are saved
-                embeddings_list.append(embedding_normalized.astype(np.float32))
-                successful_count += 1
-                print(f"[DEBUG] Register Batch: Successfully processed image {idx+1}/{len(images)} (unique so far: {successful_count})", file=sys.stderr)
+                if torch_emb is not None:
+                    result_info["torch_norm"] = float(np.linalg.norm(torch_emb))
+                    result_info["torch_mean"] = float(np.mean(torch_emb))
+                    result_info["torch_std"] = float(np.std(torch_emb))
+                
+                # Calculate similarity with first embedding if available (for visualization)
+                if front_embeddings is not None and torch_emb is not None:
+                    first_torch = front_embeddings.get("torch")
+                    if first_torch is not None:
+                        similarity = float(np.dot(torch_emb, first_torch) / (np.linalg.norm(torch_emb) * np.linalg.norm(first_torch) + 1e-8))
+                        result_info["similarity_to_first"] = similarity
+                
+                processing_results.append(result_info)
+                
+                # Save first valid embedding (for registry)
+                if front_embeddings is None:
+                    front_embeddings = embeddings_by_model
+                    print(f"[DEBUG] Register Batch: Found front-facing image at position {idx+1}, will save this embedding", file=sys.stderr)
+                else:
+                    print(f"[DEBUG] Register Batch: Processed image {idx+1} for visualization (embedding extracted but not saved)", file=sys.stderr)
                 
             except Exception as e:
                 print(f"[WARN] Register Batch: Error processing image {idx+1}: {str(e)}, skipping", file=sys.stderr)
+                processing_results.append({
+                    "image_index": idx + 1,
+                    "status": "error",
+                    "error": str(e)
+                })
                 continue
         
-        if len(embeddings_list) == 0:
-            raise HTTPException(status_code=400, detail="No valid faces detected in any image")
+        if front_embeddings is None:
+            raise HTTPException(status_code=400, detail="No valid front-facing face detected in any image")
         
-        # Save all embeddings separately (not averaged) for better accuracy
-        # First, remove existing embeddings for this user to avoid duplicates
+        # Remove existing embeddings for this user to avoid duplicates
         try:
-            existing_vectors = registry.get_user_vectors(user_id)
-            if existing_vectors:
-                print(f"[DEBUG] Register Batch: Removing {len(existing_vectors)} existing embeddings for user '{user_id}'", file=sys.stderr)
-                registry.remove_user(user_id)
+            if user_id:
+                existing_vectors = registry.get_user_vectors(user_id)
+                if existing_vectors:
+                    print(f"[DEBUG] Register Batch: Removing existing embeddings for user '{user_id}'", file=sys.stderr)
+                    registry.remove_user(user_id)
         except Exception as e:
             print(f"[WARN] Register Batch: Could not remove existing embeddings: {str(e)}", file=sys.stderr)
         
-        # Save each embedding separately
+        # Save only the front-facing embedding (single embedding per model)
         try:
             final_user_id = None
-            for idx, embedding in enumerate(embeddings_list):
-                # First embedding creates user (or adds to existing), rest add to same user
-                final_user_id = registry.add_user(name=name, embedding=embedding, user_id=user_id or final_user_id)
-                user_id = final_user_id  # Use same ID for subsequent embeddings
-                print(f"[DEBUG] Register Batch: Saved embedding {idx+1}/{len(embeddings_list)} for user '{final_user_id}' (name: '{name}', norm: {np.linalg.norm(embedding):.6f})", file=sys.stderr)
+            torch_embedding = front_embeddings.get("torch")
+            deepface_embedding = front_embeddings.get("deepface")
             
-            print(f"[DEBUG] Register Batch: Successfully saved {len(embeddings_list)} separate embeddings for user '{final_user_id}' (name: '{name}')", file=sys.stderr)
+            # Save embedding with replace=True to ensure only 1 embedding per user
+            if torch_embedding is not None:
+                final_user_id = registry.add_user(name=name, embedding=torch_embedding, user_id=user_id, model="torch", replace=True)
+                print(f"[DEBUG] Register Batch: Saved embedding for user '{final_user_id}'", file=sys.stderr)
             
-            # Get updated embedding count
-            updated_vectors = registry.get_user_vectors(final_user_id)
+            if deepface_embedding is not None:
+                final_user_id = registry.add_user(name=name, embedding=deepface_embedding, user_id=user_id or final_user_id, model="deepface", replace=True)
+            
+            if final_user_id is None:
+                raise ValueError("Failed to save embeddings for this user")
+            
+            print(f"[DEBUG] Register Batch: Successfully saved embedding for user '{final_user_id}' (name: '{name}')", file=sys.stderr)
+            
+            counts = registry.get_user_embedding_counts(final_user_id)
+            total_embeddings = counts["torch"]
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Failed to save to registry: {str(e)}")
         
+        shape_vec = torch_embedding if torch_embedding is not None else deepface_embedding
         return {
             "status": "success",
             "user_id": final_user_id,
             "name": name,
-            "embedding_count": len(updated_vectors),
-            "model": "A",
-            "images_processed": successful_count,
+            "embedding_count": total_embeddings,
+            "model": MODEL_TYPE,
+            "images_processed": len([r for r in processing_results if r.get("status") == "processed"]),  # All processed images
             "images_total": len(images),
-            "embeddings_saved": len(embeddings_list),
-            "embedding_shape": list(embeddings_list[0].shape) if embeddings_list else []
+            "embeddings_saved": total_embeddings,  # Only 1 embedding saved (first image)
+            "embedding_shape": list(shape_vec.shape) if shape_vec is not None else [],
+            "processing_results": processing_results  # All processing results for visualization
         }
         
     except HTTPException:

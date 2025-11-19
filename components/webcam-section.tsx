@@ -568,7 +568,12 @@ export function WebcamSection({ onVerifyResult }: WebcamSectionProps) {
     setIsDragging(false)
   }
 
-  const matchScoreDisplay = lastVerify?.score != null ? `${(lastVerify.score * 100).toFixed(1)}%` : "—"
+  // Calculate match score display - prioritize percentage field, fallback to score * 100
+  const matchScoreDisplay = lastVerify?.percentage != null 
+    ? `${lastVerify.percentage.toFixed(1)}%`
+    : (lastVerify?.score != null 
+        ? `${(lastVerify.score * 100).toFixed(1)}%` 
+        : "—")
   const livenessPassed = lastVerify?.liveness?.passed
   const thresholdDisplay = lastVerify?.threshold != null ? `${(lastVerify.threshold * 100).toFixed(0)}%` : "—"
   const metricDisplay = lastVerify?.metric ? lastVerify.metric.toUpperCase() : "—"

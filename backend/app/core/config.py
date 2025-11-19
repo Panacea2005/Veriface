@@ -15,14 +15,30 @@ except Exception:
 MODE: Literal["heur", "onnx"] = os.getenv("MODE", "heur")
 SIMILARITY_METRIC: Literal["cosine", "euclidean"] = os.getenv("SIMILARITY_METRIC", "cosine")  # backend-wide default
 
-# Model selection: "A", "B", or "deepface" (default: "A")
+# Model selection: "A" or "B" (default: "A")
 # - "A": Use Model A (modelA_best.pth)
 # - "B": Use Model B (modelB_best.pth)
-# - "deepface": Use DeepFace ArcFace (ignores DEEPFACE_ONLY)
 _model_type_raw = os.getenv("MODEL_TYPE", "A").lower()
-if _model_type_raw not in ["a", "b", "deepface"]:
+if _model_type_raw not in ["a", "b"]:
     _model_type_raw = "a"
-MODEL_TYPE: Literal["A", "B", "deepface"] = _model_type_raw if _model_type_raw == "deepface" else _model_type_raw.upper()  # type: ignore
+MODEL_TYPE: Literal["A", "B"] = _model_type_raw.upper()  # type: ignore
+
+# Internal configuration (not exposed in API)
+ENABLE_DEEPFACE: bool = os.getenv("ENABLE_DEEPFACE", "0").lower() in ["1", "true", "yes"]
+
+def _safe_float(value: str, default: float) -> float:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return default
+
+# Internal model weights configuration
+_torch_weight = _safe_float(os.getenv("MODEL_TORCH_WEIGHT", "0.15"), 0.15)
+_deepface_weight = _safe_float(os.getenv("MODEL_DEEPFACE_WEIGHT", "0.85"), 0.85)
+MODEL_TORCH_WEIGHT = max(0.0, _torch_weight)
+MODEL_DEEPFACE_WEIGHT = max(0.0, _deepface_weight)
+if MODEL_TORCH_WEIGHT == 0 and MODEL_DEEPFACE_WEIGHT == 0:
+    MODEL_TORCH_WEIGHT = 1.0
 
 # Paths
 BASE_DIR = Path(__file__).parent.parent

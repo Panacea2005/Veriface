@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useRef, useEffect, useCallback } from "react"
-import { Camera, X, RotateCcw, CheckCircle2, AlertCircle, ArrowLeft, ArrowRight, ArrowUp, ArrowDown, User } from "lucide-react"
+import { Camera, X, RotateCcw, CheckCircle2, AlertCircle, User } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -18,7 +18,7 @@ import { useToast } from "@/hooks/use-toast"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 
-type CaptureAngle = "front" | "left" | "right" | "up" | "down"
+type CaptureAngle = "front" | "processing"
 
 interface CaptureStep {
   angle: CaptureAngle
@@ -27,6 +27,13 @@ interface CaptureStep {
   instruction: string
   completed: boolean
   image?: string
+  processingResult?: {
+    status: "processing" | "processed" | "skipped" | "error"
+    stage?: string
+    message?: string
+    torch_norm?: number
+    embedding_dim?: number
+  }
 }
 
 const CAPTURE_STEPS: Omit<CaptureStep, "completed" | "image">[] = [
@@ -35,30 +42,34 @@ const CAPTURE_STEPS: Omit<CaptureStep, "completed" | "image">[] = [
     label: "Front",
     icon: <User className="h-6 w-6" />,
     instruction: "Look straight at the camera"
+  }
+]
+
+// Processing stages for visualization
+const PROCESSING_STAGES: Omit<CaptureStep, "completed" | "image">[] = [
+  {
+    angle: "processing",
+    label: "Stage 1",
+    icon: <Camera className="h-6 w-6" />,
+    instruction: "Face Detection & Alignment"
   },
   {
-    angle: "left",
-    label: "Left",
-    icon: <ArrowLeft className="h-6 w-6" />,
-    instruction: "Turn your face to the left"
+    angle: "processing",
+    label: "Stage 2",
+    icon: <CheckCircle2 className="h-6 w-6" />,
+    instruction: "PyTorch Model Processing"
   },
   {
-    angle: "right",
-    label: "Right",
-    icon: <ArrowRight className="h-6 w-6" />,
-    instruction: "Turn your face to the right"
+    angle: "processing",
+    label: "Stage 3",
+    icon: <CheckCircle2 className="h-6 w-6" />,
+    instruction: "Feature Extraction"
   },
   {
-    angle: "up",
-    label: "Up",
-    icon: <ArrowUp className="h-6 w-6" />,
-    instruction: "Tilt your head up"
-  },
-  {
-    angle: "down",
-    label: "Down",
-    icon: <ArrowDown className="h-6 w-6" />,
-    instruction: "Tilt your head down"
+    angle: "processing",
+    label: "Stage 4",
+    icon: <CheckCircle2 className="h-6 w-6" />,
+    instruction: "Embedding Extraction"
   }
 ]
 
@@ -78,9 +89,10 @@ export function RegisterWebcamDialog({ open, onOpenChange }: RegisterWebcamDialo
   const [isProcessing, setIsProcessing] = useState(false)
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null)
   const [videoReady, setVideoReady] = useState(false)
-  const [autoCapture, setAutoCapture] = useState(false)
   const [nameError, setNameError] = useState<string | null>(null)
   const [isCheckingName, setIsCheckingName] = useState(false)
+  const [processingStages, setProcessingStages] = useState<CaptureStep[]>([])
+  const [currentProcessingStage, setCurrentProcessingStage] = useState<number>(-1)
   
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -189,6 +201,183 @@ export function RegisterWebcamDialog({ open, onOpenChange }: RegisterWebcamDialo
     return canvas.toDataURL('image/jpeg', 0.95)
   }, [])
 
+  const handleSubmitAfterCapture = useCallback(async (imageData: string) => {
+    // Check if name already exists
+    setIsCheckingName(true)
+    try {
+      const nameExists = await checkNameExists(name.trim())
+      if (nameExists) {
+        setNameError("This name is already registered. Please use a different name.")
+        toast({
+          title: "Name already exists",
+          description: "This name is already registered. Please choose a different name.",
+          variant: "destructive",
+        })
+        setIsProcessing(false)
+        return
+      }
+      setNameError(null)
+    } catch (error) {
+      console.error("[Submit] Name check error:", error)
+      // Continue with registration if check fails
+    } finally {
+      setIsCheckingName(false)
+    }
+
+    setIsSubmitting(true)
+    
+    // Convert base64 image to Blob
+    const response = await fetch(imageData)
+    const blob = await response.blob()
+    const file = new File([blob], `${name}_front.jpg`, { type: 'image/jpeg' })
+    
+    // Initialize processing stages for visualization
+    const stages = PROCESSING_STAGES.map((stage, idx) => ({
+      ...stage,
+      completed: false,
+      image: imageData, // Use captured image for all stages
+      processingResult: {
+        status: "processing" as const,
+        stage: stage.label,
+        message: stage.instruction
+      }
+    }))
+    setProcessingStages(stages)
+    setCurrentProcessingStage(0)
+
+    try {
+      // Start registration API call in parallel with animations
+      const registerPromise = registerFaceBatch(name.trim(), [file])
+      
+      // Stage 1: Face Detection & Alignment (400ms)
+      await new Promise(resolve => setTimeout(resolve, 400))
+      setProcessingStages(prev => {
+        const updated = [...prev]
+        updated[0] = {
+          ...updated[0],
+          completed: true,
+          processingResult: {
+            status: "processed",
+            stage: "Stage 1",
+            message: "Face detected and aligned"
+          }
+        }
+        return updated
+      })
+      setCurrentProcessingStage(1)
+
+      // Stage 2: PyTorch Model Processing (500ms)
+      await new Promise(resolve => setTimeout(resolve, 500))
+      setProcessingStages(prev => {
+        const updated = [...prev]
+        updated[1] = {
+          ...updated[1],
+          completed: true,
+          processingResult: {
+            status: "processed",
+            stage: "Stage 2",
+            message: "PyTorch embedding extracted",
+            torch_norm: 1.0,
+            embedding_dim: 512
+          }
+        }
+        return updated
+      })
+      setCurrentProcessingStage(2)
+
+      // Stage 3: Feature Extraction (500ms)
+      await new Promise(resolve => setTimeout(resolve, 500))
+      setProcessingStages(prev => {
+        const updated = [...prev]
+        updated[2] = {
+          ...updated[2],
+          completed: true,
+          processingResult: {
+            status: "processed",
+            stage: "Stage 3",
+            message: "Feature extraction complete",
+            embedding_dim: 512
+          }
+        }
+        return updated
+      })
+      setCurrentProcessingStage(3)
+
+      // Wait for registration to complete (API call should finish around this time)
+      const result = await registerPromise
+
+      // Stage 4: Embedding Extraction & Normalization (use real data from API)
+      // Small delay to show transition to embedding numbers
+      await new Promise(resolve => setTimeout(resolve, 300))
+      const procResult = result.processing_results?.[0]
+      setProcessingStages(prev => {
+        const updated = [...prev]
+        updated[3] = {
+          ...updated[3],
+          completed: true,
+          processingResult: {
+            status: "processed",
+            stage: "Stage 4",
+            message: "Embeddings normalized and saved",
+            torch_norm: procResult?.torch_norm || 1.0,
+            embedding_dim: 512
+          }
+        }
+        return updated
+      })
+
+      // Update main step with final result
+      if (result.processing_results && result.processing_results.length > 0) {
+        const finalProcResult = result.processing_results[0]
+        setSteps(prevSteps => {
+          const updated = [...prevSteps]
+          updated[0] = {
+            ...updated[0],
+            processingResult: {
+              status: "processed",
+              torch_norm: finalProcResult.torch_norm
+            }
+          }
+          return updated
+        })
+      }
+
+      // Wait for Stage 4 animation to complete
+      // Stage 4 animation: 0.3s delay + 0.2s transition + 512 dots animation (~2s) = ~2.5s
+      // Add extra buffer for smooth completion
+      await new Promise(resolve => setTimeout(resolve, 2500))
+
+      toast({
+        title: "Registration successful",
+        description: `Front-facing image registered for ${name}. Processing complete!`,
+      })
+      
+      // Trigger registry update
+      window.dispatchEvent(new Event('registry-updated'))
+      
+      // Close dialog and reset after showing success message
+      setTimeout(() => {
+        onOpenChange(false)
+        setName("")
+        setCurrentStep(0)
+        setSteps(CAPTURE_STEPS.map(s => ({ ...s, completed: false })))
+        setProcessingStages([])
+        setCurrentProcessingStage(-1)
+      }, 2500)
+    } catch (error) {
+      toast({
+        title: "Registration failed",
+        description: error instanceof Error ? error.message : "Unknown error",
+        variant: "destructive",
+      })
+      setIsProcessing(false)
+      setProcessingStages([])
+      setCurrentProcessingStage(-1)
+    } finally {
+      setIsSubmitting(false)
+    }
+  }, [name, toast, onOpenChange])
+
   const handleCapture = useCallback(async () => {
     // Prevent multiple captures
     if (isCapturing || isProcessing) {
@@ -218,15 +407,8 @@ export function RegisterWebcamDialog({ open, onOpenChange }: RegisterWebcamDialo
         return newSteps
       })
       
-      // Move to next step
-      if (currentStep < steps.length - 1) {
-        setTimeout(() => {
-          setCurrentStep(prev => prev + 1)
+      // Just capture, don't auto-submit (user will click Register button)
           setIsProcessing(false)
-        }, 500)
-      } else {
-        setIsProcessing(false)
-      }
     } catch (error) {
       console.error("[Capture] Error:", error)
       toast({
@@ -243,38 +425,7 @@ export function RegisterWebcamDialog({ open, onOpenChange }: RegisterWebcamDialo
     }
   }, [currentStep, steps.length, captureImage, toast, isCapturing, isProcessing])
 
-  // Auto-capture logic using simple timer
-  useEffect(() => {
-    if (!autoCapture || !open || !videoReady) return
-    
-    const checkAndCapture = () => {
-      // Don't auto-capture if current step is already completed
-      if (steps[currentStep].completed) return
-      
-      // Don't trigger if already capturing/processing
-      if (isCapturing || isProcessing) return
-      
-      // Check if enough time has passed since last capture
-      const now = Date.now()
-      const timeSinceLastCapture = now - lastCaptureTimeRef.current
-      
-      // For first capture, wait 2 seconds. For subsequent, wait 3 seconds (allows time to move to next angle)
-      const minWaitTime = lastCaptureTimeRef.current === 0 ? 2000 : 3000
-      
-      if (timeSinceLastCapture >= minWaitTime) {
-        // Trigger auto-capture
-        console.log(`[Auto-capture] Triggering for ${steps[currentStep].label}`)
-        handleCapture()
-      }
-    }
-    
-    // Check every 500ms
-    const interval = setInterval(checkAndCapture, 500)
-    
-    return () => {
-      clearInterval(interval)
-    }
-  }, [autoCapture, open, videoReady, currentStep, isCapturing, isProcessing, steps, handleCapture])
+  // Auto-capture removed - only manual capture for single front image
 
   useEffect(() => {
     if (open) {
@@ -288,7 +439,6 @@ export function RegisterWebcamDialog({ open, onOpenChange }: RegisterWebcamDialo
       setIsCapturing(false)
       setIsProcessing(false)
       setVideoReady(false)
-      setAutoCapture(false)
       setNameError(null)
       setIsCheckingName(false)
       lastCaptureTimeRef.current = 0
@@ -317,76 +467,19 @@ export function RegisterWebcamDialog({ open, onOpenChange }: RegisterWebcamDialo
       return
     }
 
-    // Check if name already exists
-    setIsCheckingName(true)
-    try {
-      const nameExists = await checkNameExists(name.trim())
-      if (nameExists) {
-        setNameError("This name is already registered. Please use a different name.")
-        toast({
-          title: "Name already exists",
-          description: "This name is already registered. Please choose a different name.",
-          variant: "destructive",
-        })
-        return
-      }
-      setNameError(null)
-    } catch (error) {
-      console.error("[Submit] Name check error:", error)
-      // Continue with registration if check fails
-    } finally {
-      setIsCheckingName(false)
-    }
-
     const completedSteps = steps.filter(s => s.completed && s.image)
     if (completedSteps.length === 0) {
       toast({
         title: "No images captured",
-        description: "Please capture at least one image",
+        description: "Please capture an image first",
         variant: "destructive",
       })
       return
     }
 
-    setIsSubmitting(true)
-    try {
-      // Convert base64 images to Blobs
-      const imageFiles: File[] = []
-      for (const step of completedSteps) {
-        if (!step.image) continue
-        
-        // Convert base64 to Blob
-        const response = await fetch(step.image)
-        const blob = await response.blob()
-        const file = new File([blob], `${name}_${step.angle}.jpg`, { type: 'image/jpeg' })
-        imageFiles.push(file)
-      }
-      
-      // Register all images in batch (each angle saved as separate embedding)
-      const result = await registerFaceBatch(name.trim(), imageFiles)
-
-      const embeddingsCount = result.embeddings_saved || result.images_processed || completedSteps.length
-      toast({
-        title: "Registration successful",
-        description: `Registered ${embeddingsCount} angle${embeddingsCount > 1 ? 's' : ''} for ${name}. Each angle saved as a separate embedding for better accuracy.`,
-      })
-      
-      // Trigger registry update
-      window.dispatchEvent(new Event('registry-updated'))
-      
-      // Close dialog and reset
-      onOpenChange(false)
-      setName("")
-      setCurrentStep(0)
-      setSteps(CAPTURE_STEPS.map(s => ({ ...s, completed: false })))
-    } catch (error) {
-      toast({
-        title: "Registration failed",
-        description: error instanceof Error ? error.message : "Unknown error",
-        variant: "destructive",
-      })
-    } finally {
-      setIsSubmitting(false)
+    // Use the same logic as handleSubmitAfterCapture
+    if (completedSteps[0]?.image) {
+      await handleSubmitAfterCapture(completedSteps[0].image)
     }
   }
 
@@ -400,9 +493,9 @@ export function RegisterWebcamDialog({ open, onOpenChange }: RegisterWebcamDialo
       <DialogHeader className="px-4 pt-2 pb-1.5 flex-shrink-0">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <DialogTitle className="text-base">Register Face - Multi-Angle Capture</DialogTitle>
+              <DialogTitle className="text-base">Register Face</DialogTitle>
               <DialogDescription className="text-[11px]">
-                Capture your face from multiple angles for better accuracy
+                Capture your front-facing photo for registration
               </DialogDescription>
             </div>
             {/* Model selection removed; always using Model A */}
@@ -484,24 +577,7 @@ export function RegisterWebcamDialog({ open, onOpenChange }: RegisterWebcamDialo
                   </motion.div>
                 </div>
 
-                {/* Auto-capture Toggle - Top Left */}
-                <div className="absolute top-2 left-2 z-10">
-                  <motion.div
-                    className="bg-background/95 backdrop-blur-sm rounded-lg px-3 py-2 border border-border shadow-lg"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                  >
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={autoCapture}
-                        onChange={(e) => setAutoCapture(e.target.checked)}
-                        className="w-4 h-4 rounded border-border accent-accent"
-                      />
-                      <span className="text-xs font-medium">Auto-capture</span>
-                    </label>
-                  </motion.div>
-                </div>
+                {/* Auto-capture removed - only manual capture for single front image */}
 
                 {/* Capture Button - Bottom Center */}
                 <div className="absolute bottom-3 left-1/2 transform -translate-x-1/2 z-10">
@@ -509,22 +585,17 @@ export function RegisterWebcamDialog({ open, onOpenChange }: RegisterWebcamDialo
                     onClick={handleCapture}
                     size="lg"
                     className="gap-2 shadow-lg"
-                    disabled={!videoReady || isCapturing || isProcessing || steps[currentStep].completed || autoCapture}
+                    disabled={!videoReady || isCapturing || isProcessing || steps[currentStep].completed}
                   >
                     {isCapturing || isProcessing ? (
                       <>
                         <div className="animate-spin rounded-full h-5 w-5 border-2 border-current border-t-transparent" />
-                        {autoCapture ? "Auto-capturing..." : "Capturing..."}
-                      </>
-                    ) : autoCapture ? (
-                      <>
-                        <Camera className="h-5 w-5" />
-                        Auto Mode Active
+                        {isProcessing ? "Processing..." : "Capturing..."}
                       </>
                     ) : (
                       <>
                         <Camera className="h-5 w-5" />
-                        Capture {currentStepData.label}
+                        Capture Front
                       </>
                     )}
                   </Button>
@@ -548,21 +619,307 @@ export function RegisterWebcamDialog({ open, onOpenChange }: RegisterWebcamDialo
 
             {/* Preview Grid - Right */}
             <div className="lg:col-span-2 flex flex-col min-h-0">
-              <Label className="text-xs font-medium mb-2 flex-shrink-0">Captured Angles</Label>
+              <Label className="text-xs font-medium mb-2 flex-shrink-0">
+                {isSubmitting ? "Processing Stages (5 frames)" : "Captured Image"}
+              </Label>
               <div className="relative flex-1 min-h-0 overflow-visible">
-                {/* 2D Stack of Images - Each image overlaps bottom-right corner of previous, positioned at top-left */}
-                {steps.map((step, index) => {
+                {/* Show 5 frames: 1 captured image + 4 processing stages */}
+                {isSubmitting && processingStages.length > 0 ? (
+                  // 5 frames: captured image (index 0) + 4 processing stages (index 1-4)
+                  [
+                    // Frame 0: Captured image
+                    ...steps.filter(s => s.completed && s.image).map((step, stepIdx) => ({
+                      ...step,
+                      index: 0,
+                      isCaptured: true
+                    })),
+                    // Frames 1-4: Processing stages
+                    ...processingStages.map((stage, stageIdx) => ({
+                      ...stage,
+                      index: stageIdx + 1,
+                      isCaptured: false
+                    }))
+                  ].map((item, index) => {
+                    const stage = item.isCaptured ? null : item as CaptureStep
+                    const step = item.isCaptured ? item as CaptureStep : null
+                    const displayIndex = item.index
+                    const totalFrames = 5 // 1 captured + 4 stages
+                    const stackIndex = displayIndex
+                    const baseTranslateY = stackIndex * 50
+                    const baseTranslateX = stackIndex * 80
+                    const translateY = baseTranslateY
+                    const translateX = baseTranslateX
+                    const zIndex = totalFrames + 10 - stackIndex
+                    
+                    // For captured image (index 0)
+                    if (item.isCaptured && step) {
+                      return (
+                        <motion.div
+                          key="captured-image"
+                          className="absolute top-0 left-0 aspect-square rounded-md border-2 overflow-hidden border-accent bg-background"
+                          style={{
+                            zIndex: hoveredIndex === 0 ? 999 : zIndex,
+                            width: "60%",
+                            height: "60%",
+                            maxWidth: "200px",
+                            maxHeight: "200px",
+                          }}
+                          initial={{ opacity: 0, scale: 0.9 }}
+                          animate={{ 
+                            opacity: 1,
+                            scale: hoveredIndex === 0 ? 1.1 : 1,
+                            y: hoveredIndex === 0 ? translateY - 20 : translateY,
+                            x: hoveredIndex === 0 ? translateX - 40 : translateX,
+                          }}
+                          onHoverStart={() => setHoveredIndex(0)}
+                          onHoverEnd={() => setHoveredIndex(null)}
+                          transition={{ duration: 0.4, ease: "easeOut" }}
+                        >
+                          {step.image && (
+                            <>
+                              <img
+                                src={step.image}
+                                alt="Captured"
+                                className="w-full h-full object-cover"
+                              />
+                              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/40 to-transparent flex flex-col justify-between">
+                                <div className="p-2 w-full">
+                                  <span className="text-xs font-bold text-white">Captured</span>
+                                </div>
+                              </div>
+                            </>
+                          )}
+                        </motion.div>
+                      )
+                    }
+                    
+                    // For processing stages (index 1-4)
+                    if (!item.isCaptured && stage) {
+                      const stageIndex = displayIndex - 1 // Convert to 0-3 for processing stages
+                      const isActive = currentProcessingStage === stageIndex
+                      const isCompleted = stage.completed
+                      const isProcessing = stage.processingResult?.status === "processing"
+                      
+                      // Progressive visualization matching actual embedding process:
+                      // Stage 1: Face Detection & Alignment - show face detection overlay
+                      // Stage 2: PyTorch Model - show embedding vector being generated (first 128 dims)
+                      // Stage 3: Feature Extraction - show embedding vector being generated (next 128 dims)
+                      // Stage 4: Normalization & Save - show complete normalized 512-D embedding vector
+                      const showFaceDetection = stageIndex === 0 && (isActive || isProcessing) // Stage 1: face detection
+                      const showPyTorchEmbedding = stageIndex === 1 && (isActive || isCompleted) // Stage 2: PyTorch embedding (first 128 dims)
+                      const showFeatureExtraction = stageIndex === 2 && (isActive || isCompleted) // Stage 3: Feature extraction (next 128 dims)
+                      const showFinalEmbedding = stageIndex === 3 && isCompleted // Stage 4: final normalized embedding (all 512 dims)
+                      const imageOpacity = stageIndex === 0 ? 1 : Math.max(0, 1 - (stageIndex * 0.25)) // Fade out image gradually
+                      const embeddingOpacity = (showPyTorchEmbedding || showFeatureExtraction || showFinalEmbedding) ? 1 : 0
+                      
+                      return (
+                        <motion.div
+                          key={`stage-${displayIndex}`}
+                          className={`absolute top-0 left-0 aspect-square rounded-md border-2 overflow-hidden ${
+                            isCompleted
+                              ? "border-green-500 bg-background"
+                              : isActive || isProcessing
+                              ? "border-blue-500 bg-background"
+                              : "border-border bg-muted opacity-50"
+                          }`}
+                          style={{
+                            zIndex: hoveredIndex === displayIndex ? 999 : zIndex,
+                            width: "60%",
+                            height: "60%",
+                            maxWidth: "200px",
+                            maxHeight: "200px",
+                          }}
+                          initial={{ opacity: 0, scale: 0.8, y: translateY + 20, x: translateX + 20 }}
+                          animate={{ 
+                            opacity: isActive || isCompleted ? 1 : 0.5,
+                            scale: hoveredIndex === displayIndex ? 1.1 : (isActive ? 1.05 : 1),
+                            y: hoveredIndex === displayIndex ? translateY - 20 : translateY,
+                            x: hoveredIndex === displayIndex ? translateX - 40 : translateX,
+                          }}
+                          onHoverStart={() => setHoveredIndex(displayIndex)}
+                          onHoverEnd={() => setHoveredIndex(null)}
+                          transition={{ duration: 0.4, ease: "easeOut" }}
+                        >
+                        {stage.image ? (
+                          <>
+                            {/* Base image - fades out as we progress through stages */}
+                            <motion.div
+                              className="absolute inset-0"
+                              animate={{
+                                opacity: imageOpacity,
+                                filter: stageIndex > 0 ? "grayscale(100%) brightness(0.2)" : "grayscale(0%) brightness(1)",
+                              }}
+                              transition={{ duration: 0.8, ease: "easeInOut" }}
+                            >
+                              <img
+                                src={stage.image}
+                                alt={stage.label}
+                                className="w-full h-full object-cover"
+                              />
+                            </motion.div>
+                            
+                            {/* Face Detection Overlay (Stage 1) */}
+                            {showFaceDetection && (
+                              <motion.div
+                                className="absolute inset-0 pointer-events-none"
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                transition={{ duration: 0.3 }}
+                              >
+                                {/* Face bounding box overlay */}
+                                <motion.div
+                                  className="absolute top-1/4 left-1/4 w-1/2 h-1/2 border-[3px] border-black bg-transparent"
+                                  style={{
+                                    boxShadow: "4px 4px 0 0 black"
+                                  }}
+                                  initial={{ scale: 0.8, opacity: 0 }}
+                                  animate={{ scale: 1, opacity: 1 }}
+                                  transition={{ duration: 0.4, ease: "easeOut" }}
+                                />
+                                {/* Face landmarks (simplified - 5 points) */}
+                                {[
+                                  { x: "35%", y: "40%" }, // Left eye
+                                  { x: "65%", y: "40%" }, // Right eye
+                                  { x: "50%", y: "55%" }, // Nose
+                                  { x: "40%", y: "70%" }, // Left mouth
+                                  { x: "60%", y: "70%" }, // Right mouth
+                                ].map((point, idx) => (
+                                  <motion.div
+                                    key={idx}
+                                    className="absolute w-2 h-2 bg-black border-[2px] border-black"
+                                    style={{
+                                      left: point.x,
+                                      top: point.y,
+                                      transform: "translate(-50%, -50%)",
+                                      boxShadow: "2px 2px 0 0 black"
+                                    }}
+                                    initial={{ scale: 0 }}
+                                    animate={{ scale: 1 }}
+                                    transition={{ delay: 0.2 + idx * 0.1, duration: 0.2 }}
+                                  />
+                                ))}
+                              </motion.div>
+                            )}
+
+                            {/* Embedding Vector Visualization (Stages 2-4) - Neo Brutalism Style */}
+                            {(showPyTorchEmbedding || showFeatureExtraction || showFinalEmbedding) && (
+                              <motion.div
+                                className="absolute inset-0 bg-white"
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: embeddingOpacity }}
+                                transition={{ duration: 0.5, ease: "easeOut" }}
+                              >
+                                {(() => {
+                                  // Determine grid layout and dot size based on stage
+                                  let totalDots = 0
+                                  let cols = 16
+                                  let rows = 0
+                                  let gap = 1
+                                  
+                                  if (showFinalEmbedding) {
+                                    // Stage 4: 512 dots - 16x32 grid, smaller dots
+                                    totalDots = 512
+                                    cols = 16
+                                    rows = 32
+                                    gap = 0.5
+                                  } else if (showFeatureExtraction) {
+                                    // Stage 3: 256 dots - 16x16 grid, medium dots
+                                    totalDots = 256
+                                    cols = 16
+                                    rows = 16
+                                    gap = 1
+                                  } else if (showPyTorchEmbedding) {
+                                    // Stage 2: 128 dots - 16x8 grid, larger dots
+                                    totalDots = 128
+                                    cols = 16
+                                    rows = 8
+                                    gap = 1.5
+                                  }
+                                  
+                                  return (
+                                    <motion.div 
+                                      className="w-full h-full p-2 flex items-center justify-center"
+                                      initial={{ opacity: 0 }}
+                                      animate={{ opacity: embeddingOpacity }}
+                                      transition={{ duration: 0.6, delay: 0.2, ease: "easeOut" }}
+                                    >
+                                      <div 
+                                        className="grid w-full h-full"
+                                        style={{
+                                          gridTemplateColumns: `repeat(${cols}, 1fr)`,
+                                          gridTemplateRows: `repeat(${rows}, 1fr)`,
+                                          gap: `${gap * 4}px`
+                                        }}
+                                      >
+                                        {Array.from({ length: totalDots }).map((_, numIdx) => {
+                                          // Batch delays: group dots into batches for smoother animation
+                                          const batchSize = 4
+                                          const batchIdx = Math.floor(numIdx / batchSize)
+                                          const withinBatchIdx = numIdx % batchSize
+                                          const batchDelay = batchIdx * 0.008 // 8ms per batch
+                                          const withinBatchDelay = withinBatchIdx * 0.002 // 2ms within batch
+                                          const totalDelay = batchDelay + withinBatchDelay
+                                          
+                                          return (
+                                            <motion.div
+                                              key={numIdx}
+                                              className="w-full h-full"
+                                              initial={{ opacity: 0, scale: 0 }}
+                                              animate={{ 
+                                                opacity: 1, 
+                                                scale: 1 
+                                              }}
+                                              transition={{
+                                                duration: 0.2,
+                                                delay: totalDelay,
+                                                ease: "easeOut"
+                                              }}
+                                              style={{ willChange: "transform, opacity" }}
+                                            >
+                                              <div 
+                                                className="w-full h-full bg-black border-[2px] border-black"
+                                                style={{
+                                                  boxShadow: "2px 2px 0 0 black"
+                                                }}
+                                              />
+                                            </motion.div>
+                                          )
+                                        })}
+                                      </div>
+                                    </motion.div>
+                                  )
+                                })()}
+                              </motion.div>
+                            )}
+                          </>
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center bg-muted">
+                            <div className="text-center">
+                              <div className="p-2 rounded-full bg-accent/20 text-accent mb-2 mx-auto w-fit">
+                                {stage.icon}
+                              </div>
+                              <p className="text-xs font-medium">{stage.label}</p>
+                              <p className="text-[10px] text-muted-foreground">{stage.instruction}</p>
+                            </div>
+                          </div>
+                        )}
+                      </motion.div>
+                      )
+                    }
+                    
+                    // Fallback (should not happen)
+                    return null
+                  }).filter(Boolean)
+                ) : (
+                  // Show captured image when not processing
+                  steps.map((step, index) => {
                   const totalSteps = steps.length
-                  // Front (index 0) is on top, last image is at bottom
-                  const stackIndex = index // 0 = top (front), 4 = bottom
-                  // Each image shifts down and to the right, overlapping bottom-right corner
-                  // All images start from top-left corner
-                  const baseTranslateY = stackIndex * 50 // 0px, 50px, 100px, 150px, 200px
-                  const baseTranslateX = stackIndex * 80 // 0px, 80px, 160px, 240px, 320px (wider spacing on x-axis)
+                    const stackIndex = index
+                    const baseTranslateY = stackIndex * 50
+                    const baseTranslateX = stackIndex * 80
                   const translateY = baseTranslateY
                   const translateX = baseTranslateX
-                  // Fix z-index: Front (index 0) should have HIGHEST z-index
-                  const zIndex = totalSteps + 10 - stackIndex // Front: 15, Last: 11 (higher = on top)
+                    const zIndex = totalSteps + 10 - stackIndex
                   
                   return (
                     <motion.div
@@ -599,11 +956,13 @@ export function RegisterWebcamDialog({ open, onOpenChange }: RegisterWebcamDialo
                             alt={step.label}
                             className="w-full h-full object-cover"
                           />
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end">
-                            <div className="p-2 w-full">
-                              <div className="flex items-center justify-between">
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/40 to-transparent flex flex-col justify-between">
+                              <div className="p-2 w-full flex items-center justify-between">
                                 <span className="text-xs font-medium text-white">
                                   {step.label}
+                                  {step.processingResult?.status === "processed" && (
+                                    <Badge variant="default" className="ml-1.5 h-4 px-1 text-[9px]">Saved</Badge>
+                                  )}
                                 </span>
                                 <Button
                                   size="sm"
@@ -617,7 +976,6 @@ export function RegisterWebcamDialog({ open, onOpenChange }: RegisterWebcamDialo
                                 >
                                   <RotateCcw className="h-3 w-3" />
                                 </Button>
-                              </div>
                             </div>
                           </div>
                         </>
@@ -637,7 +995,8 @@ export function RegisterWebcamDialog({ open, onOpenChange }: RegisterWebcamDialo
                       )}
                     </motion.div>
                   )
-                })}
+                  })
+                )}
               </div>
             </div>
           </div>

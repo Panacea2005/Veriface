@@ -8,6 +8,7 @@ export interface VerifyResponse {
   matched_id: string | null
   matched_name?: string | null
   score: number | null
+  percentage?: number | null  // Percentage (0-100) for the best match score
   metric: string
   threshold: number | null
   emotion_label: string
@@ -43,6 +44,18 @@ export interface LivenessResponse {
   message: string
 }
 
+export interface ProcessingResult {
+  image_index: number
+  status: "processed" | "skipped" | "error"
+  reason?: string
+  error?: string
+  has_torch?: boolean
+  torch_norm?: number
+  torch_mean?: number
+  torch_std?: number
+  similarity_to_first?: number
+}
+
 export interface RegisterResponse {
   status: string
   user_id: string
@@ -53,6 +66,7 @@ export interface RegisterResponse {
   images_processed?: number
   images_total?: number
   embeddings_saved?: number
+  processing_results?: ProcessingResult[]  // Processing results for all images (for visualization)
 }
 
 export interface HealthResponse {

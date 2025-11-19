@@ -42,3 +42,10 @@ next-env.d.ts
 backend/app/models/*.pth
 backend/app/models/*.onnx
 backend/app/models/*.pt
+
+# data store (user registrations, attendance logs, etc.)
+backend/app/store/
+*.jsonl
+
+# ignore JSON files in store directory only
+backend/app/store/*.json

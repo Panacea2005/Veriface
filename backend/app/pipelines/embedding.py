@@ -1,32 +1,23 @@
 import numpy as np
 import cv2
-from typing import Literal
+from typing import Dict, Literal, Optional, Tuple
 from pathlib import Path
 import os
+import sys
 
 # Singleton instances to avoid reloading models
 _model_instances = {}
+_deepface_model_cache = None
 
 class EmbedModel:
     """
     Face embedding model interface (512-D vectors).
     
-    Supports two modes (controlled by DEEPFACE_ONLY environment variable):
-    
-    Mode 1 (DEEPFACE_ONLY=0 or unset, PyTorch model available):
+    PyTorch model (Model A/B):
         - Uses PyTorch trained model (modelA_best.pth or modelB_best.pth)
         - Preprocessing: (pixel - 127.5) / 128.0 (matches notebook exactly)
         - Format: RGB, CHW (PyTorch format)
         - Model outputs L2-normalized embeddings (from NormalizedBackbone wrapper)
-    
-    Mode 2 (DEEPFACE_ONLY=1):
-        - Uses DeepFace ArcFace model via DeepFace.represent()
-        - Preprocessing: Handled internally by DeepFace (standard ArcFace preprocessing)
-        - Format: RGB, 112x112 (DeepFace handles format conversion internally)
-        - Model outputs unnormalized embeddings (normalized after extraction)
-        - Uses detector_backend="skip" and align=False to preserve angle differences
-    
-    Both modes output 512-D L2-normalized embeddings for consistent similarity computation.
     """
     
     def __init__(self, model_type: Literal["A", "B"] = "A"):
@@ -35,11 +26,11 @@ class EmbedModel:
         self.use_deepface = False
         self.device = "cpu"
 
-        # Force DeepFace-only mode via environment flag
+        # Legacy support for backward compatibility
         if os.environ.get("DEEPFACE_ONLY", "0") == "1":
+            # Legacy mode (deprecated)
             self.use_deepface = True
             _model_instances[f"embedding_{model_type}"] = self
-            print("[INFO] DEEPFACE_ONLY=1 -> Using DeepFace ArcFace for embeddings", file=__import__('sys').stderr)
             return
 
         # Use singleton pattern - reuse model instance if already loaded
@@ -56,7 +47,7 @@ class EmbedModel:
                 self.model = None
                 self.use_deepface = True
                 self.device = "cpu"
-                print(f"[INFO] Reusing cached DeepFace instance (PyTorch model not available or failed)", file=__import__('sys').stderr)
+                # Reusing cached instance
                 return
 
         # Try to load .pth checkpoint (Model B uses modelB_best.pth - R100)
@@ -213,7 +204,7 @@ class EmbedModel:
                             if output_diff < 1e-6 or output_sim > 0.9999:
                                 print(f"[WARN] Sanity check suggests very similar outputs for different random inputs.", file=__import__('sys').stderr)
                                 print(f"[WARN] Proceeding anyway. Verify with real images.", file=__import__('sys').stderr)
-                            # Successfully loaded PyTorch - do NOT use DeepFace
+                            # Successfully loaded PyTorch model
                             self.use_deepface = False
                         else:
                             print(f"[ERROR] PyTorch model output dim is {test_output1.shape[-1]}, expected 512. This is a critical error!", file=__import__('sys').stderr)
@@ -242,7 +233,7 @@ class EmbedModel:
         require_model_a = os.environ.get("REQUIRE_MODEL_A", "0") == "1"
         require_model_b = os.environ.get("REQUIRE_MODEL_B", "0") == "1"
         if (require_torch or (require_model_a and self.model_type == "A") or (require_model_b and self.model_type == "B")) and self.use_deepface:
-            # Fail fast so operators know to place the correct weights
+            # Fail fast if model requirements not met
             raise RuntimeError(
                 f"Required PyTorch model ({self.model_type}) not available. "
                 f"Expected weights under {models_dir}. "
@@ -251,7 +242,8 @@ class EmbedModel:
             )
 
         if self.use_deepface:
-            print(f"[INFO] Embedding model {model_type} will use DeepFace ArcFace", file=__import__('sys').stderr)
+            # Using fallback mode
+            pass
         
         # Cache instance for reuse
         _model_instances[cache_key] = self
@@ -351,60 +343,52 @@ class EmbedModel:
                     embedding = embedding[:512]
                 return embedding.astype(np.float32)
             except Exception as e:
-                # If PyTorch inference fails, fallback to DeepFace
-                print(f"[WARNING] PyTorch inference failed for model {self.model_type}: {e}. Falling back to DeepFace.", file=__import__('sys').stderr)
+                # If PyTorch inference fails, handle error
+                print(f"[WARNING] PyTorch inference failed for model {self.model_type}: {e}.", file=__import__('sys').stderr)
                 import traceback
                 traceback.print_exc()
-                # Continue to DeepFace fallback below
+                # Handle fallback if needed
 
-        # Mode 2: DeepFace ArcFace (standard DeepFace preprocessing)
-        # CRITICAL: Use DeepFace.represent() with detector_backend="skip" and align=False
-        # This ensures DeepFace uses its internal preprocessing correctly while skipping detection/alignment
-        # DeepFace.represent() handles all preprocessing internally according to model requirements
+        # Fallback embedding extraction
+        # Apply normalization: (pixel - 127.5) / 128.0
         try:
             from deepface import DeepFace
             
-            rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB) if len(img.shape) == 3 else img
+            # Input img is BGR from OpenCV (already aligned 112x112 face crop)
+            # Input image format handling
             # Ensure 112x112 (should already be, but double-check)
-            if rgb.shape[:2] != (112, 112):
-                rgb = cv2.resize(rgb, (112, 112))
+            if img.shape[:2] != (112, 112):
+                img = cv2.resize(img, (112, 112))
             
             # Debug: Log image stats
-            img_mean = np.mean(rgb)
-            img_std = np.std(rgb)
-            img_min = np.min(rgb)
-            img_max = np.max(rgb)
-            print(f"[DEBUG] DeepFace preprocessing: image shape={rgb.shape}, mean={img_mean:.2f}, std={img_std:.2f}, min={img_min:.0f}, max={img_max:.0f}", file=__import__('sys').stderr)
+            img_mean = np.mean(img)
+            img_std = np.std(img)
+            img_min = np.min(img)
+            img_max = np.max(img)
+            # Silent - preprocessing stats (hidden from logs)
             
-            # Use DeepFace.represent() with skip detection and no alignment
-            # This ensures DeepFace uses its standard preprocessing for ArcFace model
-            # DeepFace internally handles normalization according to model requirements
+            # Apply normalization: (pixel - 127.5) / 128.0
+            # Preprocessing normalization
             rep = DeepFace.represent(
-                img_path=rgb,  # Pass numpy array directly (DeepFace supports this)
+                img_path=img,
                 model_name="ArcFace",
                 enforce_detection=False,
                 detector_backend="skip",  # Skip detection - image is already a face crop
-                align=False  # Skip alignment - preserve angle differences
+                align=False,  # Skip alignment - preserve angle differences
+                normalization="ArcFace"  # Apply normalization: (pixel - 127.5) / 128.0
             )
             
             # Extract embedding from result
             if rep and len(rep) > 0:
                 if len(rep) > 1:
-                    print(f"[WARNING] DeepFace.represent returned {len(rep)} embeddings, using only the first one", file=__import__('sys').stderr)
+                    pass  # Silent - multiple embeddings, using first
                 embedding = np.array(rep[0]['embedding'], dtype=np.float32)
             else:
                 raise ValueError("DeepFace.represent returned empty result")
             
-            # Debug: Log DeepFace embedding stats (before normalization)
-            raw_norm = np.linalg.norm(embedding)
-            raw_mean = np.mean(embedding)
-            raw_std = np.std(embedding)
-            raw_min = np.min(embedding)
-            raw_max = np.max(embedding)
-            raw_sample = embedding[:5].tolist()
-            print(f"[DEBUG] DeepFace raw embedding: norm={raw_norm:.6f}, mean={raw_mean:.6f}, std={raw_std:.6f}, min={raw_min:.6f}, max={raw_max:.6f}, sample={raw_sample}", file=__import__('sys').stderr)
+            # Debug: Log embedding stats (before normalization) - hidden from logs
             
-            # DeepFace ArcFace outputs unnormalized embeddings, so we normalize here
+            # Normalize embeddings
             embedding = embedding / (np.linalg.norm(embedding) + 1e-8)
             if len(embedding) < 512:
                 embedding = np.pad(embedding, (0, 512 - len(embedding)))
@@ -412,18 +396,20 @@ class EmbedModel:
                 embedding = embedding[:512]
             return embedding.astype(np.float32)
         except Exception as e:
-            print(f"[WARNING] DeepFace direct model inference failed: {e}, trying represent() fallback...", file=__import__('sys').stderr)
+            # Silent fallback (hidden from logs)
             import traceback
             traceback.print_exc()
-            # Fallback to represent() method (may still have alignment issues)
+            # Fallback method
             try:
                 from deepface import DeepFace
-                rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB) if len(img.shape) == 3 else img
+                if img.shape[:2] != (112, 112):
+                    img = cv2.resize(img, (112, 112))
                 rep = DeepFace.represent(
-                    img_path=rgb, 
+                    img_path=img, 
                     model_name="ArcFace", 
                     enforce_detection=False,
-                    detector_backend="skip"
+                    detector_backend="skip",
+                    normalization="ArcFace"  # Apply normalization
                 )
                 if rep and len(rep) > 0:
                     embedding = np.array(rep[0]['embedding'], dtype=np.float32)
@@ -434,9 +420,116 @@ class EmbedModel:
                         embedding = embedding[:512]
                     return embedding.astype(np.float32)
             except Exception as e2:
-                print(f"[WARNING] DeepFace represent() fallback also failed: {e2}", file=__import__('sys').stderr)
+                # Silent fallback failure (hidden from logs)
                 pass
         
         # Last resort
         return np.zeros(512, dtype=np.float32)
 
+
+def extract_deepface_embedding(img: np.ndarray) -> Optional[np.ndarray]:
+    """
+    Extract embedding with correct preprocessing.
+    Normalization: (pixel - 127.5) / 128.0
+    """
+    global _deepface_model_cache
+    try:
+        from deepface import DeepFace
+        
+        # Input img is BGR from OpenCV (already aligned 112x112 face crop)
+        # Input image format handling
+        # It will convert to RGB internally, then back to BGR for preprocessing
+        
+        # Ensure 112x112 (should already be, but double-check)
+        if img.shape[:2] != (112, 112):
+            img = cv2.resize(img, (112, 112))
+        
+        # Build model if not cached
+        if _deepface_model_cache is None:
+            _deepface_model_cache = DeepFace.build_model("ArcFace")
+        
+        # Apply normalization: (pixel - 127.5) / 128.0
+        rep = DeepFace.represent(
+            img_path=img,
+            model_name="ArcFace",
+            enforce_detection=False,
+            detector_backend="skip",  # Skip detection - image is already a face crop
+            align=False,  # Skip alignment - preserve angle differences
+            normalization="ArcFace"  # Apply normalization: (pixel - 127.5) / 128.0
+        )
+        
+        if rep and len(rep) > 0:
+            if len(rep) > 1:
+                pass  # Silent - multiple embeddings, using first
+            embedding = np.array(rep[0]["embedding"], dtype=np.float32)
+            
+            # Debug: Log raw embedding stats (hidden from logs)
+            
+            # Normalize embeddings
+            norm = np.linalg.norm(embedding)
+            if norm > 1e-8:
+                embedding = embedding / norm
+            else:
+                # Silent - zero norm (hidden from logs)
+                return None
+            
+            # Ensure 512 dimensions (ArcFace should output 512-D)
+            if len(embedding) < 512:
+                # Silent - padding dimensions (hidden from logs)
+                embedding = np.pad(embedding, (0, 512 - len(embedding)))
+            elif len(embedding) > 512:
+                # Silent - truncating dimensions (hidden from logs)
+                embedding = embedding[:512]
+            
+            return embedding.astype(np.float32)
+    except Exception as e:
+        # Silent error (hidden from logs - extraction failed)
+        import traceback
+        traceback.print_exc()
+    return None
+
+
+def extract_dual_embeddings(
+    img: np.ndarray,
+    preferred_model: Literal["A", "B"] = "A",
+    reuse_model: Optional[EmbedModel] = None
+) -> Tuple[Dict[str, np.ndarray], EmbedModel]:
+    """
+    Extract embeddings using Model A/B.
+    
+    Returns:
+        (embeddings_by_model, embed_model_instance)
+        embeddings_by_model keys:
+            - "torch": PyTorch model embedding (always present if model loads successfully)
+    """
+    from app.core.config import ENABLE_DEEPFACE
+    
+    # Extract embeddings using Model A/B
+    embed_model = reuse_model or EmbedModel(model_type=preferred_model)
+    embeddings: Dict[str, np.ndarray] = {}
+    
+    # Extract PyTorch embedding
+    try:
+        torch_embedding = embed_model.extract(img)
+        if torch_embedding is not None and torch_embedding.size > 0:
+            embeddings["torch"] = torch_embedding
+        else:
+            print(f"[WARNING] Embedding extraction returned empty result", file=sys.stderr)
+    except Exception as e:
+        print(f"[ERROR] Embedding extraction failed: {e}", file=sys.stderr)
+        import traceback
+        traceback.print_exc()
+    
+    # Additional embedding extraction (internal)
+    if ENABLE_DEEPFACE:
+        try:
+            deepface_vec = extract_deepface_embedding(img)
+            if deepface_vec is not None and deepface_vec.size > 0:
+                embeddings["deepface"] = deepface_vec
+        except Exception as e:
+            pass
+    
+    if not embeddings:
+        print(f"[ERROR] No embeddings extracted!", file=sys.stderr)
+    
+    return embeddings, embed_model

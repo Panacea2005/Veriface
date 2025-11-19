@@ -78,13 +78,13 @@ async def get_registry(
     names: Dict[str, str] = {}
     
     for uid, user_data in data.items():
-        # Handle both new format {name, embeddings} and legacy format [[embeddings]]
-        if isinstance(user_data, dict) and "embeddings" in user_data:
-            counts[uid] = len(user_data["embeddings"])
+        if isinstance(user_data, dict):
+            torch_vecs = user_data.get("embeddings", [])
+            counts[uid] = len(torch_vecs)
             names[uid] = user_data.get("name", uid)
         elif isinstance(user_data, list):
             counts[uid] = len(user_data)
-            names[uid] = uid  # Legacy format - use user_id as name
+            names[uid] = uid
         else:
             counts[uid] = 0
             names[uid] = uid
@@ -97,7 +97,8 @@ async def get_registry(
         # Extract embeddings from new or legacy format
         user_data = data[uid]
         if isinstance(user_data, dict) and "embeddings" in user_data:
-            user_vecs = user_data["embeddings"][:limit_per_user]
+            torch_vecs = user_data.get("embeddings", [])
+            user_vecs = torch_vecs[:limit_per_user]
         elif isinstance(user_data, list):
             user_vecs = user_data[:limit_per_user]
         else:
@@ -135,7 +136,8 @@ async def get_registry(
             user_data = data.get(uid, [])
             # Extract embeddings from new or legacy format
             if isinstance(user_data, dict) and "embeddings" in user_data:
-                user_vectors = user_data["embeddings"]
+                torch_vecs = user_data.get("embeddings", [])
+                user_vectors = torch_vecs
             elif isinstance(user_data, list):
                 user_vectors = user_data
             else:

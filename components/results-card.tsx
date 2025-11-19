@@ -9,6 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { motion, AnimatePresence } from "framer-motion"
 import type { VerifyResponse } from "@/lib/api"
+import { fetchRegistry } from "@/lib/api"
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Legend } from "recharts"
 
@@ -43,6 +44,7 @@ interface DetailedLog {
 export function ResultsCard({ verifyResult, verifyHistory = [] }: ResultsCardProps) {
   const [logs, setLogs] = useState<DetailedLog[]>([])
   const [processingSteps, setProcessingSteps] = useState<Array<{ step: string; time: number }>>([])
+  const [namesMapping, setNamesMapping] = useState<Record<string, string>>({})
   const [sessionMetrics, setSessionMetrics] = useState<SessionMetrics>({
     totalVerifications: 0,
     successfulMatches: 0,
@@ -51,6 +53,25 @@ export function ResultsCard({ verifyResult, verifyHistory = [] }: ResultsCardPro
     avgMatchScore: 0,
     timestampedData: []
   })
+  
+  // Fetch names mapping when verifyResult changes
+  useEffect(() => {
+    if (verifyResult?.all_scores && verifyResult.all_scores.length > 0) {
+      fetchRegistry({ includeVectors: false, project: "none", limitPerUser: 1 })
+        .then(registry => {
+          if (registry.names) {
+            setNamesMapping(registry.names)
+          }
+        })
+        .catch((err) => {
+          console.error("Failed to fetch names mapping:", err)
+          // Silently fail - names will just show user_id
+        })
+    } else {
+      // Clear names mapping when no scores
+      setNamesMapping({})
+    }
+  }, [verifyResult?.all_scores])
   // Emotion UI moved to WebcamSection; no subscription needed here
 
   // Accumulate logs from all verification results
@@ -211,15 +232,18 @@ export function ResultsCard({ verifyResult, verifyHistory = [] }: ResultsCardPro
   }, [verifyHistory])
 
   // Calculate match score - always show best score from backend
-  const matchScore = verifyResult?.score !== null && verifyResult?.score !== undefined
-    ? (verifyResult.metric === "cosine" 
-        ? verifyResult.score * 100  // Cosine: convert 0-1 to 0-100%
-        : verifyResult.score)  // Euclidean: keep as distance
-    : (verifyResult?.all_scores && verifyResult.all_scores.length > 0
-        ? (verifyResult.metric === "cosine"
-            ? verifyResult.all_scores[0].percentage  // Use percentage from all_scores
-            : verifyResult.all_scores[0].score)  // Use raw score for euclidean
-        : 0)
+  // Priority: 1. result.percentage (if available), 2. result.score * 100, 3. all_scores[0].percentage
+  const matchScore = verifyResult?.percentage !== null && verifyResult?.percentage !== undefined
+    ? verifyResult.percentage  // Use percentage directly from backend (already in 0-100%)
+    : (verifyResult?.score !== null && verifyResult?.score !== undefined
+        ? (verifyResult.metric === "cosine" 
+            ? verifyResult.score * 100  // Cosine: convert 0-1 to 0-100%
+            : verifyResult.score)  // Euclidean: keep as distance
+        : (verifyResult?.all_scores && verifyResult.all_scores.length > 0
+            ? (verifyResult.metric === "cosine"
+                ? verifyResult.all_scores[0].percentage ?? (verifyResult.all_scores[0].score * 100)  // Use percentage from all_scores, fallback to score * 100
+                : verifyResult.all_scores[0].score)  // Use raw score for euclidean
+            : 0))
   
   const threshold = verifyResult?.threshold !== null && verifyResult?.threshold !== undefined
     ? (verifyResult.metric === "cosine" 
@@ -534,6 +558,7 @@ export function ResultsCard({ verifyResult, verifyHistory = [] }: ResultsCardPro
                       <TableHeader>
                         <TableRow className="border-b border-border hover:bg-transparent bg-muted/30">
                           <TableHead className="h-8 px-3 py-2 font-medium text-foreground/80">Rank</TableHead>
+                          <TableHead className="h-8 px-3 py-2 font-medium text-foreground/80">Name</TableHead>
                           <TableHead className="h-8 px-3 py-2 font-medium text-foreground/80">User ID</TableHead>
                           <TableHead className="h-8 px-3 py-2 font-medium text-foreground/80 text-right">Match %</TableHead>
                           <TableHead className="h-8 px-3 py-2 font-medium text-foreground/80 text-right">Embeddings</TableHead>
@@ -563,6 +588,9 @@ export function ResultsCard({ verifyResult, verifyHistory = [] }: ResultsCardPro
                                 </span>
                               </TableCell>
                               <TableCell className="px-3 py-2 font-medium text-foreground">
+                                {namesMapping[item.user_id] || item.user_id}
+                              </TableCell>
+                              <TableCell className="px-3 py-2 font-mono text-foreground/70 text-[10px]">
                                 <div className="flex items-center gap-2">
                                   {item.user_id}
                                   {isMatched && (

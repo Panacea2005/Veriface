@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
-import { getAttendance, getAttendanceStats, exportAttendance, getUserMetadata, type AttendanceRecord, type AttendanceStats, type VerifyResponse } from "@/lib/api"
+import { getAttendance, getAttendanceStats, exportAttendance, getUserMetadata, fetchRegistry, type AttendanceRecord, type AttendanceStats, type VerifyResponse } from "@/lib/api"
 import { RefreshCw, Calendar, Users, TrendingUp, Download, Search,  X } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, PieChart, Pie, Cell, Legend } from "recharts"
@@ -71,8 +71,22 @@ export function AttendanceHistory({ verifyResult }: AttendanceHistoryProps) {
   const [filterDateFrom, setFilterDateFrom] = useState("")
   const [filterDateTo, setFilterDateTo] = useState("")
   const [userMetadata, setUserMetadata] = useState<Record<string, { name?: string; department?: string; email?: string }>>({})
+  const [namesMapping, setNamesMapping] = useState<Record<string, string>>({})
   const { toast } = useToast()
   const lastMatchedIdRef = useRef<string | null>(null)
+  
+  // Fetch names mapping from registry
+  useEffect(() => {
+    fetchRegistry({ includeVectors: false, project: "none", limitPerUser: 1 })
+      .then(registry => {
+        if (registry.names) {
+          setNamesMapping(registry.names)
+        }
+      })
+      .catch((err) => {
+        console.error("Failed to fetch names mapping:", err)
+      })
+  }, [records]) // Re-fetch when records change
 
   const loadAttendance = useCallback(async () => {
     setLoading(true)
@@ -537,8 +551,8 @@ export function AttendanceHistory({ verifyResult }: AttendanceHistoryProps) {
                       {paginatedRecords.map((record, idx) => {
                         const { date, time } = formatTimestamp(record.timestamp)
                         const meta = userMetadata[record.user_id] || {}
-                        // Use name from registry (enriched by backend) or fallback to metadata/user_id
-                        const displayName = record.name || meta.name || record.user_id
+                        // Use name from registry mapping first, then record.name, then metadata, then user_id
+                        const displayName = namesMapping[record.user_id] || record.name || meta.name || record.user_id
                         return (
                           <tr key={idx} className="border-b border-border/50 hover:bg-muted/50 transition-colors">
                             <td className="py-3 px-4 text-sm">

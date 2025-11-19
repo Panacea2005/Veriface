@@ -1,17 +1,10 @@
 similarity:
   cosine:
-    # Thresholds for different models
-    threshold: 0.4  # Default for PyTorch trained model (validated EER: 0.2344)
-    threshold_pytorch: 0.4  # PyTorch trained model threshold (stricter for sibling discrimination)
-    threshold_deepface: 0.5  # DeepFace ArcFace standard threshold (validated by DeepFace library)
-    method: max  # Best for multi-pose: selects best matching angle (fastest, simplest)
-    k: 3  # Top-K: Take top 3 out of 5 embeddings (not used for max)
-    vote_threshold: 0.6  # Hybrid: 60% of embeddings must pass (not used for max)
-    margin_threshold: 0.20  # Delta-Margin: min gap between 1st & 2nd (not used for max)
+    # Similarity threshold for face verification
+    # Cosine similarity score must be >= this threshold to match
+    threshold: 0.6
+    method: max  # Aggregation method: "max", "mean", "median", "top_k", "delta_margin", "hybrid"
   euclidean:
     threshold: 1.23
 
-# Anti-spoof uses DeepFace argmax (no threshold)
-# Note: Threshold is automatically selected based on DEEPFACE_ONLY environment variable
-# - DEEPFACE_ONLY=1: Uses threshold_deepface (0.68)
-# - DEEPFACE_ONLY=0: Uses threshold_pytorch (0.4)
+# Anti-spoof detection threshold (no threshold, uses argmax)

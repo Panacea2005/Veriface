@@ -1,6 +1,6 @@
 import json
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Literal
 import numpy as np
 from app.core.config import REGISTRY_PATH
 
@@ -19,26 +19,38 @@ class FaceRegistry:
         self.path = REGISTRY_PATH
         self.registry: Dict[str, dict] = self._load()
     
+    def _normalize_entry(self, user_id: str, entry) -> dict:
+        """Ensure registry entry follows standard structure."""
+        if isinstance(entry, list):
+            return {
+                "name": user_id,
+                "embeddings": entry,
+                "embeddings_deepface": []
+            }
+        if not isinstance(entry, dict):
+            return {
+                "name": user_id,
+                "embeddings": [],
+                "embeddings_deepface": []
+            }
+        normalized = dict(entry)
+        normalized.setdefault("name", user_id)
+        normalized.setdefault("embeddings", [])
+        normalized.setdefault("embeddings_deepface", [])
+        return normalized
+    
     def _load(self) -> Dict[str, dict]:
         """Load registry from JSON."""
         if self.path.exists():
             with open(self.path, 'r') as f:
                 data = json.load(f)
-                # Handle legacy format (direct embeddings) and migrate
-                if data and isinstance(list(data.values())[0], list):
-                    # Legacy format: {user_id: [[embeddings]]}
-                    # Migrate to new format: {user_id: {name, embeddings}}
-                    migrated = {}
-                    for user_id, embeddings in data.items():
-                        migrated[user_id] = {
-                            "name": user_id,  # Use user_id as name for legacy data
-                            "embeddings": embeddings
-                        }
-                    # Save migrated data
-                    with open(self.path, 'w') as f:
-                        json.dump(migrated, f, indent=2)
-                    return migrated
-                return data
+                if not data:
+                    return {}
+                migrated = {uid: self._normalize_entry(uid, entry) for uid, entry in data.items()}
+                if migrated != data:
+                    with open(self.path, 'w') as wf:
+                        json.dump(migrated, wf, indent=2)
+                return migrated
         return {}
     
     def _save(self):
@@ -65,13 +77,15 @@ class FaceRegistry:
         next_num = max_num + 1
         return f"SWS{next_num:05d}"
     
-    def add_user(self, name: str, embedding: np.ndarray, user_id: Optional[str] = None) -> str:
+    def add_user(self, name: str, embedding: np.ndarray, user_id: Optional[str] = None, model: Literal["torch", "deepface"] = "torch", replace: bool = True) -> str:
         """Add or update user embedding. Returns user_id.
         
         Args:
             name: User's name
             embedding: Face embedding vector
-            user_id: Optional user_id. If None, auto-generate new ID. If exists, add embedding to existing user.
+            user_id: Optional user_id. If None, auto-generate new ID. If exists, replace or add embedding.
+            model: Which embedding list to update
+            replace: If True (default), replace all embeddings with new one (single embedding). If False, append.
         
         Returns:
             user_id (generated or provided)
@@ -79,30 +93,23 @@ class FaceRegistry:
         # Always reload from file first to ensure we have latest state
         self.registry = self._load()
         vec = embedding.tolist()
-        
-        # If user_id provided and exists, add embedding to existing user
-        if user_id and user_id in self.registry:
-            self.registry[user_id]["embeddings"].append(vec)
-            self._save()
-            return user_id
-        
-        # If user_id provided but doesn't exist, create new user with that ID
-        if user_id and user_id not in self.registry:
-            self.registry[user_id] = {
-                "name": name,
-                "embeddings": [vec]
-            }
-            self._save()
-            return user_id
-        
-        # No user_id provided: generate new ID
-        new_user_id = self._generate_user_id()
-        self.registry[new_user_id] = {
-            "name": name,
-            "embeddings": [vec]
-        }
+        target_id = user_id or self._generate_user_id()
+        entry = self._normalize_entry(target_id, self.registry.get(target_id, {"name": name}))
+        if name:
+            entry["name"] = name
+        if model == "deepface":
+            if replace:
+                entry["embeddings_deepface"] = [vec]  # Replace with single embedding
+            else:
+                entry["embeddings_deepface"].append(vec)  # Append (legacy behavior)
+        else:
+            if replace:
+                entry["embeddings"] = [vec]  # Replace with single embedding
+            else:
+                entry["embeddings"].append(vec)  # Append (legacy behavior)
+        self.registry[target_id] = entry
         self._save()
-        return new_user_id
+        return target_id
     
     def get_all(self) -> Dict[str, dict]:
         """Get all user data. Reloads from file to get latest data.
@@ -128,12 +135,25 @@ class FaceRegistry:
         user_data = self.registry.get(user_id)
         return user_data["name"] if user_data else None
     
-    def get_user_vectors(self, user_id: str) -> List[List[float]]:
+    def get_user_vectors(self, user_id: str, model: Literal["torch", "deepface"] = "torch") -> List[List[float]]:
         """Get all embedding vectors for a user."""
         # Always reload from file first to ensure we have latest state
         self.registry = self._load()
         user_data = self.registry.get(user_id)
-        return user_data["embeddings"] if user_data else []
+        if not user_data:
+            return []
+        if model == "deepface":
+            return user_data.get("embeddings_deepface", [])
+        return user_data.get("embeddings", [])
+
+    def get_user_embedding_counts(self, user_id: str) -> Dict[str, int]:
+        """Return embedding counts per model for a user."""
+        self.registry = self._load()
+        user_data = self.registry.get(user_id, {})
+        return {
+            "torch": len(user_data.get("embeddings", [])),
+            "deepface": len(user_data.get("embeddings_deepface", []))
+        }
     
     def remove_user(self, user_id: str) -> bool:
         """Remove user from registry. Returns True if removed."""
@@ -160,11 +180,13 @@ class FaceRegistry:
         self.registry = self._load()
         if user_id not in self.registry:
             return False
-        vectors = self.registry[user_id]
+        entry = self.registry[user_id]
+        vectors = entry.get("embeddings", [])
         if index < 0 or index >= len(vectors):
             return False
         del vectors[index]
-        if len(vectors) == 0:
+        entry["embeddings"] = vectors
+        if len(vectors) == 0 and len(entry.get("embeddings_deepface", [])) == 0:
             # Remove user if no embeddings left
             del self.registry[user_id]
         self._save()
@@ -175,7 +197,9 @@ class FaceRegistry:
         # Always reload from file first to ensure we have latest state
         self.registry = self._load()
         if user_id in self.registry:
-            self.registry[user_id]["embeddings"] = embeddings
+            entry = self._normalize_entry(user_id, self.registry[user_id])
+            entry["embeddings"] = embeddings
+            self.registry[user_id] = entry
             self._save()
     
     def update_user_name(self, user_id: str, name: str) -> bool:

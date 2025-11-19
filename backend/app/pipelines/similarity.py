@@ -11,23 +11,14 @@ class SimilarityMatcher:
         with open(THRESHOLDS_PATH) as f:
             self.config = yaml.safe_load(f)
         
-        # Auto-select threshold based on model type (PyTorch or DeepFace)
-        use_deepface = os.environ.get("DEEPFACE_ONLY", "0") == "1"
         cosine_config = self.config.get("similarity", {}).get("cosine", {})
-        
-        if use_deepface:
-            # Use DeepFace ArcFace threshold (standard: 0.68)
-            self.cosine_threshold = cosine_config.get("threshold_deepface", 0.68)
-            print(f"[INFO] Using DeepFace ArcFace threshold: {self.cosine_threshold}", file=__import__('sys').stderr)
-        else:
-            # Use PyTorch trained model threshold (validated: 0.4)
-            self.cosine_threshold = cosine_config.get("threshold_pytorch", cosine_config.get("threshold", 0.4))
-            print(f"[INFO] Using PyTorch trained model threshold: {self.cosine_threshold}", file=__import__('sys').stderr)
+        self.cosine_threshold = cosine_config.get("threshold", 0.7)
+        print(f"[INFO] Using similarity threshold: {self.cosine_threshold}", file=__import__('sys').stderr)
         
         self.euclidean_threshold = self.config.get("similarity", {}).get("euclidean", {}).get("threshold", 5.0)
         
         # Aggregation method: "max", "mean", "median", "top_k", "delta_margin", "hybrid"
-        self.method = self.config.get("similarity", {}).get("cosine", {}).get("method", "top_k")
+        self.method = self.config.get("similarity", {}).get("cosine", {}).get("method", "max")
         self.top_k = self.config.get("similarity", {}).get("cosine", {}).get("k", 3)
         self.vote_threshold = self.config.get("similarity", {}).get("cosine", {}).get("vote_threshold", 0.60)
         self.margin_threshold = self.config.get("similarity", {}).get("cosine", {}).get("margin_threshold", 0.15)
@@ -190,11 +181,7 @@ class SimilarityMatcher:
         best_score = -1.0 if metric == "cosine" else float('inf')
         threshold = self.cosine_threshold if metric == "cosine" else self.euclidean_threshold
         
-        print(f"[DEBUG] Matching with metric={metric}, method={self.method}, threshold={threshold}", file=sys.stderr)
-        print(f"[DEBUG] Registry has {len(registry)} users", file=sys.stderr)
-        
         if not registry:
-            print(f"[DEBUG] Registry is empty!", file=sys.stderr)
             return None
         
         for user_id, user_data in registry.items():
@@ -206,8 +193,6 @@ class SimilarityMatcher:
             else:
                 continue
             
-            print(f"[DEBUG] Checking user '{user_id}' with {len(vectors)} embeddings", file=sys.stderr)
-            
             user_scores = []
             for idx, vec in enumerate(vectors):
                 vec_array = np.array(vec, dtype=np.float32)
@@ -215,7 +200,6 @@ class SimilarityMatcher:
                 
                 # Ensure same length
                 if len(query_vec_normalized) != len(vec_array):
-                    print(f"[DEBUG] Warning: Dimension mismatch - query: {len(query_vec_normalized)}, registry: {len(vec_array)}", file=sys.stderr)
                     continue
                 
                 # Normalize registry embeddings if needed (for compatibility with old embeddings)
@@ -225,33 +209,27 @@ class SimilarityMatcher:
                     if not self._warned_about_old_embeddings:
                         print(f"[WARNING] Registry embeddings appear to be from a different model (norm: {vec_norm:.4f}). Normalizing for compatibility, but match scores may be low. Consider re-registering with current model.", file=sys.stderr)
                         self._warned_about_old_embeddings = True
-                    print(f"[DEBUG]   Normalized registry embedding {idx+1} (original norm: {vec_norm:.4f})", file=sys.stderr)
                 
                 if metric == "cosine":
                     score = self.cosine_similarity(query_vec_normalized, vec_array)
                     user_scores.append(score)
                     # Debug: Check if embeddings are identical
                     vec_diff = np.linalg.norm(query_vec_normalized - vec_array)
-                    print(f"[DEBUG]   Embedding {idx+1} cosine score: {score:.4f}, L2 distance: {vec_diff:.6f}", file=sys.stderr)
                     if vec_diff < 1e-6:
                         print(f"[WARNING]   Embeddings are nearly identical (distance: {vec_diff:.6f}) - possible duplicate registration!", file=sys.stderr)
                 else:  # euclidean
                     dist = self.euclidean_distance(query_vec_normalized, vec_array)
                     user_scores.append(dist)
-                    print(f"[DEBUG]   Embedding {idx+1} euclidean distance: {dist:.4f}", file=sys.stderr)
             
             # Aggregate scores for this user
             if user_scores:
                 if metric == "cosine":
                     aggregated_score = self.aggregate_scores(user_scores, self.method)
-                    print(f"[DEBUG]   Raw scores: {[f'{s:.4f}' for s in user_scores]}", file=sys.stderr)
-                    print(f"[DEBUG]   Aggregated score ({self.method}): {aggregated_score:.4f}", file=sys.stderr)
                     
                     # Hybrid method: check voting
                     if self.method == "hybrid":
                         votes = sum(1 for s in user_scores if s >= threshold)
                         vote_confidence = votes / len(user_scores)
-                        print(f"[DEBUG]   Voting: {votes}/{len(user_scores)} ({vote_confidence*100:.1f}%) passed threshold", file=sys.stderr)
                         
                         # Only accept if both score AND voting pass
                         if vote_confidence >= self.vote_threshold and aggregated_score >= threshold:
@@ -265,26 +243,17 @@ class SimilarityMatcher:
                             best_user = user_id
                 else:  # euclidean
                     aggregated_score = min(user_scores)  # Best distance
-                    print(f"[DEBUG]   Aggregated distance (min): {aggregated_score:.4f}", file=sys.stderr)
                     if aggregated_score < best_score:
                         best_score = aggregated_score
                         best_user = user_id
         
-        print(f"[DEBUG] Best match: user='{best_user}', score={best_score:.4f}, threshold={threshold}", file=sys.stderr)
-        
         # Check threshold
         if metric == "cosine":
             if best_score >= threshold:
-                print(f"[DEBUG] Match PASSED (score {best_score:.4f} >= threshold {threshold})", file=sys.stderr)
                 return (best_user, best_score)
-            else:
-                print(f"[DEBUG] Match FAILED (score {best_score:.4f} < threshold {threshold})", file=sys.stderr)
         else:  # euclidean
             if best_score <= threshold:
-                print(f"[DEBUG] Match PASSED (distance {best_score:.4f} <= threshold {threshold})", file=sys.stderr)
                 return (best_user, best_score)
-            else:
-                print(f"[DEBUG] Match FAILED (distance {best_score:.4f} > threshold {threshold})", file=sys.stderr)
         
         return None
 
