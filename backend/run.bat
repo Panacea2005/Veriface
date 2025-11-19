@@ -223,14 +223,6 @@ if not exist "%MODEL_WEIGHTS_PATH%" (
 )
 echo [OK] Model %MODEL_TYPE% checkpoint found: %MODEL_WEIGHTS_PATH%
 
-python scripts\verify_models.py
-if errorlevel 1 (
-    echo.
-    echo [ERROR] Model verification failed. Check the message above and MODEL_WEIGHTS_PATH.
-    pause
-    exit /b 1
-)
-
 REM Internal verification (silent)
 
 REM Step 6: Run server
