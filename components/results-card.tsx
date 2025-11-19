@@ -236,13 +236,13 @@ export function ResultsCard({ verifyResult, verifyHistory = [] }: ResultsCardPro
   const matchScore = verifyResult?.percentage !== null && verifyResult?.percentage !== undefined
     ? verifyResult.percentage  // Use percentage directly from backend (already in 0-100%)
     : (verifyResult?.score !== null && verifyResult?.score !== undefined
-        ? (verifyResult.metric === "cosine" 
-            ? verifyResult.score * 100  // Cosine: convert 0-1 to 0-100%
-            : verifyResult.score)  // Euclidean: keep as distance
-        : (verifyResult?.all_scores && verifyResult.all_scores.length > 0
-            ? (verifyResult.metric === "cosine"
+    ? (verifyResult.metric === "cosine" 
+        ? verifyResult.score * 100  // Cosine: convert 0-1 to 0-100%
+        : verifyResult.score)  // Euclidean: keep as distance
+    : (verifyResult?.all_scores && verifyResult.all_scores.length > 0
+        ? (verifyResult.metric === "cosine"
                 ? verifyResult.all_scores[0].percentage ?? (verifyResult.all_scores[0].score * 100)  // Use percentage from all_scores, fallback to score * 100
-                : verifyResult.all_scores[0].score)  // Use raw score for euclidean
+            : verifyResult.all_scores[0].score)  // Use raw score for euclidean
             : 0))
   
   const threshold = verifyResult?.threshold !== null && verifyResult?.threshold !== undefined

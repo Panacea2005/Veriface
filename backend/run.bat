@@ -182,7 +182,7 @@ if "%MODEL_TYPE%"=="A" (
     exit /b 1
 )
 REM PyTorch model is always required
-set REQUIRE_TORCH=1
+    set REQUIRE_TORCH=1
 REM Legacy configuration (kept for backward compatibility)
 set DEEPFACE_ONLY=0
 
@@ -191,8 +191,8 @@ echo [OK] CORS_ORIGINS=%CORS_ORIGINS%
 echo [OK] MODEL_TYPE=%MODEL_TYPE%
 echo [OK] SIMILARITY_METRIC=%SIMILARITY_METRIC%
 echo [OK] Embedding Model: Model %MODEL_TYPE%
-echo [OK] Model Weights: %MODEL_WEIGHTS_PATH%
-echo [OK] Preprocessing: Notebook training normalization
+    echo [OK] Model Weights: %MODEL_WEIGHTS_PATH%
+    echo [OK] Preprocessing: Notebook training normalization
 
 REM Step 4: Create necessary directories
 echo.
@@ -211,18 +211,18 @@ if not exist "app\models" (
 )
 
 REM Step 5: Verify model files
-echo.
-echo Verifying PyTorch model files - Model %MODEL_TYPE%...
-if not exist "%MODEL_WEIGHTS_PATH%" (
-    echo [ERROR] Missing required model: %MODEL_WEIGHTS_PATH%
-    echo Please place your Model %MODEL_TYPE% checkpoint at the configured path.
-    echo Expected path: %MODEL_WEIGHTS_PATH%
     echo.
-    pause
-    exit /b 1
-)
-echo [OK] Model %MODEL_TYPE% checkpoint found: %MODEL_WEIGHTS_PATH%
-
+    echo Verifying PyTorch model files - Model %MODEL_TYPE%...
+    if not exist "%MODEL_WEIGHTS_PATH%" (
+        echo [ERROR] Missing required model: %MODEL_WEIGHTS_PATH%
+        echo Please place your Model %MODEL_TYPE% checkpoint at the configured path.
+        echo Expected path: %MODEL_WEIGHTS_PATH%
+        echo.
+        pause
+        exit /b 1
+    )
+    echo [OK] Model %MODEL_TYPE% checkpoint found: %MODEL_WEIGHTS_PATH%
+    
 REM Internal verification (silent)
 
 REM Step 6: Run server
