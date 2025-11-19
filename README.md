@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="Veriface/public/logo.png" alt="Veriface Logo" width="120" height="120">
+  <img src="/public/logo.png" alt="Veriface Logo" width="120" height="120">
   
   # Veriface
   
